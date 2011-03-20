@@ -9,12 +9,15 @@ where
 
 import Data.List (isPrefixOf)
 
+-- | User commands
 data UCmd
   = UCmdContinue
   | UCmdStep
   | UCmdNext
+  | UCmdQuit
   deriving Show
 
+-- | Parse user command
 parseUCmd :: String -> Maybe UCmd
 parseUCmd = parse . words
   where
@@ -25,8 +28,10 @@ parseUCmd = parse . words
       "continue" -> Just UCmdContinue
       "step"     -> Just UCmdStep
       "next"     -> Just UCmdNext
+      "quit"     -> Just UCmdQuit
       _          -> Nothing
 
+-- | Parse base command
 parseBaseCmd :: String -> Maybe String
 parseBaseCmd s =
   if length condidates == 1
@@ -37,7 +42,7 @@ parseBaseCmd s =
 
 -- | List of base commands
 baseCommands :: [String]
-baseCommands = ["continue", "step", "next"]
+baseCommands = ["continue", "step", "next", "quit"]
 
 -- | Returns list of base commands that maches the given prefix
 suggestBaseCmd :: String -> [String]

@@ -26,6 +26,7 @@ Executable hfd
                      App,
                      Inst,
                      IMsg,
+                     OMsg,
                      UCmd
   Ghc-options:       -Wall -Werror -fno-warn-orphans
 
