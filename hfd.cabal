@@ -1,0 +1,31 @@
+Name:                hfd
+Version:             0.0.1
+Synopsis:            Flash debugger
+License:             BSD3
+License-file:        LICENSE
+Author:              Yuras Shumovich
+Maintainer:          shumovichy@gmail.com
+Category:            Development
+Build-type:          Simple
+-- Extra-source-files:  
+Cabal-version:       >=1.2
+
+Executable hfd
+  Hs-source-dirs:    src
+  Main-is:           hfd.hs
+  Build-depends:
+                     base < 4.3.0.0,
+                     network < 3.0.0.0,
+                     haskeline < 0.7.0.0,
+                     iteratee < 1.0.0.0,
+                     bytestring < 1.0.0.0,
+                     MonadCatchIO-transformers < 0.3.0.0,
+                     transformers < 0.3.0.0,
+                     MissingH < 2.0.0.0
+  Other-modules:
+                     App,
+                     Inst,
+                     IMsg,
+                     UCmd
+  Ghc-options:       -Wall -Werror -fno-warn-orphans
+
