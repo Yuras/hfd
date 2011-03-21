@@ -14,49 +14,50 @@ import qualified Data.Iteratee as I
 import Data.Iteratee (Iteratee, Endian(LSB), endianRead4, endianRead2)
 import Control.Monad (replicateM, when)
 
--- | Messages send by player
-data IMsg
-  = IMsgMenuState Word32 Word32                                          -- ^ 00 or 00
-  | IMsgCreateAnonymObject Word32                                        -- ^ 03 or 03
-  | IMsgTrace ByteString                                                 -- ^ 05 or 05
-  | IMsgSetField Word32 ByteString [Word8]                               -- ^ 0A or 10
-  | IMsgDeleteField Word32 ByteString                                    -- ^ 0B or 11
-  | IMsgMovieAttr ByteString ByteString                                  -- ^ 0C or 12
-  | IMsgSwdFileEntry Word32 Word32 ByteString ByteString Word32          -- ^ 0E or 14
-  | IMsgAskBreakpoints                                                   -- ^ 0F or 15
-  | IMsgBreakHit Word16 Word16 Word32 ByteString                         -- ^ 10 or 16
-  | IMsgBreak                                                            -- ^ 11 or 17
-  | IMsgSetLocalVars Word32                                              -- ^ 12 or 18
-  | IMsgBreakpoints [(Word16, Word16)]                                   -- ^ 13 or 19
-  | IMsgNumSwdFileEntry Word32 Word32                                    -- ^ 14 or 20
-  | IMsgProcessTag                                                       -- ^ 19 or 25
-  | IMsgVersion Word32 Word8                                             -- ^ 1A or 26
-  | IMsgBreakHitEx Word16 Word16 [(Word16, Word16, Word32, ByteString)]  -- ^ 1B or 27
-  | IMsgSetField2 Word32 ByteString [Word8]                              -- ^ 1C or 28
-  | IMsgException Word32 ByteString [Word8]                              -- ^ 24 or 36
-  | IMsgUnknown Word32 [Word8]
 
-instance Show IMsg where
-  show (IMsgVersion major minor) = "IMsgVersion(" ++ show major ++ ", " ++ show minor ++ ")"
-  show (IMsgMovieAttr name value) = "IMsgMovieAttr(" ++ show name ++ ", " ++ show value ++ ")"
-  show (IMsgNumSwdFileEntry num index) = "IMsgNumSwdFileEntry(" ++ show num ++ ", " ++ show index ++ ")"
-  show (IMsgSwdFileEntry fileId unIndex name source swfIndex) =
-    "IMsgSwdFileEntry(" ++ show fileId ++ ", " ++ show unIndex ++ ", " ++ show name ++ ", " ++ show source ++ ", " ++ show swfIndex ++ ")"
-  show (IMsgBreakpoints l) = "IMsgBreakpoints(" ++ show l ++ ")"
-  show IMsgAskBreakpoints = "IMsgAskBreakpoints"
-  show (IMsgBreakHit fileId line addr function) = "IMsgBreakHit(" ++ show fileId ++ ", " ++ show line ++ ", " ++ show addr ++ ", " ++ show function ++ ")"
-  show (IMsgBreakHitEx fileId line stack) = "IMsgBreakHitEx(" ++ show fileId ++ ", " ++ show line ++ ", " ++ show stack ++ ")"
-  show IMsgBreak = "IMsgBreak"
-  show (IMsgSetLocalVars addr) = "IMsgSetLocalVars(" ++ show addr ++ ")"
-  show (IMsgCreateAnonymObject addr) = "IMsgCreateAnonymObject(" ++ show addr ++ ")"
-  show (IMsgMenuState arg1 arg2) = "IMsgMenuState(" ++ show arg1 ++ ", " ++ show arg2 ++ ")"
-  show (IMsgSetField2 addr name amf) = "IMsgSetField2(" ++ show addr ++ ", " ++ show name ++ ", " ++ show amf ++ ")"
-  show (IMsgSetField addr name amf) = "IMsgSetField(" ++ show addr ++ ", " ++ show name ++ ", " ++ show amf ++ ")"
-  show (IMsgDeleteField addr name) = "IMsgDeleteField(" ++ show addr ++ ", " ++ show name ++ ")"
-  show IMsgProcessTag = "IMsgProcessTag"
-  show (IMsgTrace msg) = "IMsgTrace(" ++ show msg ++ ")"
-  show (IMsgException arg1 ex arg3) = "IMsgException(" ++ show arg1 ++ ", " ++ show ex ++ ", " ++ show arg3 ++ ")"
-  show (IMsgUnknown idi dat) = "IMsgUnknown(" ++ show idi ++ ", " ++ show dat ++ ")"
+-- * Interface
+
+-- | Messages sent by player
+data IMsg
+  -- | 00 or 00
+  = IMsgMenuState Word32 Word32
+  -- | 03 or 03
+  | IMsgCreateAnonymObject Word32
+  -- | 05 or 05
+  | IMsgTrace ByteString
+  -- | 0A or 10
+  | IMsgSetField Word32 ByteString [Word8]
+  -- | 0B or 11
+  | IMsgDeleteField Word32 ByteString
+  -- | 0C or 12
+  | IMsgMovieAttr ByteString ByteString
+  -- | 0E or 14
+  | IMsgSwdFileEntry Word32 Word32 ByteString ByteString Word32
+  -- | 0F or 15
+  | IMsgAskBreakpoints
+  -- | 10 or 16
+  | IMsgBreakHit Word16 Word16 Word32 ByteString
+  -- | 11 or 17
+  | IMsgBreak
+  -- | 12 or 18
+  | IMsgSetLocalVars Word32
+  -- | 13 or 19
+  | IMsgBreakpoints [(Word16, Word16)]
+  -- | 14 or 20
+  | IMsgNumSwdFileEntry Word32 Word32
+  -- | 19 or 25
+  | IMsgProcessTag
+  -- | 1A or 26
+  | IMsgVersion Word32 Word8
+  -- | 1B or 27
+  | IMsgBreakHitEx Word16 Word16 [(Word16, Word16, Word32, ByteString)]
+  -- | 1C or 28
+  | IMsgSetField2 Word32 ByteString [Word8]
+  -- | 24 or 36
+  | IMsgException Word32 ByteString [Word8]
+  -- | All other
+  | IMsgUnknown Word32 [Word8]
+  deriving Show
 
 -- | Read next message from player
 nextIMessage :: Monad m => Iteratee ByteString m IMsg
@@ -85,8 +86,9 @@ nextIMessage = do
            _  -> iterUnknown idi len
   return msg
 
-e_ :: Endian
-e_ = LSB
+
+-- * Internals
+-- ** Iteratees to parse messages
 
 iterException :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterException len = do
@@ -200,7 +202,8 @@ iterSwdFileEntry len = do
   (name, ln1) <- takeStr
   (source, ln2) <- takeStr
   swfIndex <- endianRead4 e_
-  when (len /= fromIntegral (ln1 + ln2) + 12) (fail "iterSwdFileEntry: wrong length")
+  when (len /= fromIntegral (ln1 + ln2) + 12)
+       (fail "iterSwdFileEntry: wrong length")
   return $ IMsgSwdFileEntry fileId unIndex name source swfIndex
 
 iterUnknown :: Monad m => Word32 -> Word32 -> Iteratee ByteString m IMsg
@@ -215,18 +218,6 @@ iterVersion len = do
   minor <- I.head
   return $ IMsgVersion major minor
 
--- | Read zero terminated string
--- returns string and number of bytes read
-takeStr :: Monad m => Iteratee ByteString m (ByteString, Int)
-takeStr = takeStr' [] 0
-  where
-  takeStr' :: Monad m => [Word8] -> Int -> Iteratee ByteString m (ByteString, Int)
-  takeStr' cs len = do
-    c <- I.head
-    if c == 0
-      then return . (flip (,) (len + 1)) . pack . reverse $ cs
-      else takeStr' (c:cs) (len + 1)
-
 iterMovieAttr :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterMovieAttr len = do
   (name, ln1) <- takeStr
@@ -240,4 +231,23 @@ iterNumSwdFileEntry len = do
   num <- endianRead4 e_
   index <- endianRead4 e_
   return $ IMsgNumSwdFileEntry num index
+
+
+-- ** Utilities
+
+e_ :: Endian
+e_ = LSB
+
+-- | Read zero terminated string
+-- returns string and number of bytes read
+takeStr :: Monad m => Iteratee ByteString m (ByteString, Int)
+takeStr = takeStr' [] 0
+  where
+  takeStr' :: Monad m =>
+    [Word8] -> Int -> Iteratee ByteString m (ByteString, Int)
+  takeStr' cs len = do
+    c <- I.head
+    if c == 0
+      then return . (flip (,) (len + 1)) . pack . reverse $ cs
+      else takeStr' (c:cs) (len + 1)
 
