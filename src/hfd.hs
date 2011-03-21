@@ -53,14 +53,31 @@ app h = do
   when (not exit) (app h) 
 
 -- | Process player's messages until 'IMsgBreakHitEx' received
-processUntillBreak :: MonadIO m => App m ()
+processUntillBreak :: App IO ()
 processUntillBreak = do
   msg <- nextIMessage
   liftIO $ print msg
   case msg of
-    IMsgBreakHitEx _ _ _       -> return ()
+    IMsgBreakHitEx _ _ _       -> printSourceLine msg >> return ()
     IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak
     _                          -> processUntillBreak
+
+-- | Print current source line
+printSourceLine :: IMsg -> App IO ()
+printSourceLine (IMsgBreakHitEx file line _) = do
+  files <- lift . lift $ fmap asFiles get
+  let mln = srcLine files
+  if isJust mln
+    then liftIO $ putStrLn $ fromJust mln
+    else liftIO $ putStrLn "No source"
+  where
+  srcLine files = do
+    FileEntry _ content <- lookup (fromIntegral file) files
+    let lln = take 1 $ drop (fromIntegral line - 1) content
+    if length lln == 0
+      then Nothing
+      else Just $ head lln
+printSourceLine _ = error "printSourceLine: something is wrong..."
 
 -- | Read file content and add new file entry
 processFileEntry :: MonadIO m => IMsg -> App m ()
