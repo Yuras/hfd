@@ -44,13 +44,17 @@ parseUCmd = parse . words
       _                     -> Nothing
 
 -- | Parse @breakpoint@ command
+--
+-- XXX: very pure code, rewrite
 parseBreakpointCmd :: [String] -> Maybe UCmd
 parseBreakpointCmd [pos] = do
   (m, res) <- head' pos
   when (m /= '#') Nothing
   let fl = takeWhile isDigit res
+  when (null fl) Nothing
   let res1 = drop (length fl) res
   (m1, ln) <- head' res1
+  when (null ln) Nothing
   when (m1 /= ':') Nothing
   when (not $ all isDigit ln) Nothing
   return $ UCmdBreakpoint (read fl) (read ln)
