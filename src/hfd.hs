@@ -54,7 +54,7 @@ app = do
 -- | Process player's messages until 'IMsgBreakHitEx' received
 processUntillBreak :: App IO ()
 processUntillBreak = do
-  msg <- nextIMessage
+  msg <- nextMsg
   liftIO $ print msg
   case msg of
     IMsgBreakHitEx _ _ _       -> printSourceLine msg >> return ()
@@ -124,7 +124,7 @@ processCmd UCmdTest               = doGetFrame >> processUserInput
 doSetBreakpoint :: MonadIO m => Int -> Int -> App m Bool
 doSetBreakpoint fl ln = do
   sendMsg (OMsgSetBreakpoint (fromIntegral fl) (fromIntegral ln))
-  msg <- nextIMessage
+  msg <- nextMsg
   case msg of
     IMsgBreakpoints _ -> return ()
     _ -> liftIO $ putStrLn "doSetBreakpoint: Unexpected message from player"
@@ -134,7 +134,7 @@ doSetBreakpoint fl ln = do
 doPrint :: MonadIO m => String -> App m ()
 doPrint v = do
   _ <- doGetFrame
-  msg <- nextIMessage
+  msg <- nextMsg
   case msg of
     IMsgFunctionFrame _ _ _ vs -> findValue vs
     _ -> liftIO $ putStrLn "doPrint: Unexpected message from player"
@@ -180,4 +180,14 @@ sendMsg msg = do
   h <- lift . lift $ liftM asHandle get
   liftIO $ hPut h (binOMsg msg) >> hFlush h
   return ()
+
+-- | Take next message
+-- This function is just a wrapper around nextIMessage,
+-- the only difference is that it responses to `IMsgProcessTag` message
+nextMsg :: MonadIO m => App m IMsg
+nextMsg = do
+  msg <- nextIMessage
+  case msg of
+    IMsgProcessTag -> sendMsg OMsgProcessTag >> nextMsg
+    _              -> return msg
 

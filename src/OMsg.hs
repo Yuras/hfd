@@ -19,6 +19,7 @@ data OMsg
   | OMsgSetBreakpoint Word16 Word16  -- ^ 11 or 17
   | OMsgNext                         -- ^ 14 or 20
   | OMsgStep                         -- ^ 15 or 21
+  | OMsgProcessTag                   -- ^ 17 or 23
   | OMsgGetFunctionFrame Word32      -- ^ 1A or 26
 
 -- | Convert `OMsg` to `ByteString`
@@ -27,6 +28,7 @@ binOMsg (OMsgSetBreakpoint fl ln)    = mkBin 17 (mkBinWord32 0 `append` mkBinWor
 binOMsg OMsgContinue                 = mkBin 15 empty
 binOMsg OMsgNext                     = mkBin 20 empty
 binOMsg OMsgStep                     = mkBin 21 empty
+binOMsg OMsgProcessTag               = mkBin 23 empty
 binOMsg (OMsgGetFunctionFrame depth) = mkBin 26 (mkBinWord32 depth)
 
 -- | Make binary message
