@@ -48,14 +48,23 @@ acceptPlayer = bracket
 app :: App IO ()
 app = do
   processUntillBreak
-  exit <- processUserInput
-  when (not exit) app
+  -- sendMsg (OMsgSetDebuggerOptions "break_on_fault" "on")
+  -- sendMsg (OMsgSetDebuggerOptions "disable_script_stuck" "on")
+  -- sendMsg (OMsgSetDebuggerOptions "disable_script_stuck_dialog" "on")
+  -- sendMsg (OMsgSetDebuggerOptions "enumerate_override" "on")
+  sendMsg (OMsgSetDebuggerOptions "notify_on_failure" "on")
+  -- sendMsg (OMsgSetDebuggerOptions "invoke_setters" "on")
+  -- sendMsg (OMsgSetDebuggerOptions "swf_load_messages" "on")
+  loop
+  where
+  loop = do
+    exit <- processUserInput
+    when (not exit) (processUntillBreak >> loop)
 
 -- | Process player's messages until 'IMsgBreakHitEx' received
 processUntillBreak :: App IO ()
 processUntillBreak = do
   msg <- nextMsg
-  liftIO $ print msg
   case msg of
     IMsgBreakHitEx _ _ _       -> printSourceLine msg >> return ()
     IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak
@@ -187,6 +196,7 @@ sendMsg msg = do
 nextMsg :: MonadIO m => App m IMsg
 nextMsg = do
   msg <- nextIMessage
+  liftIO $ print msg
   case msg of
     IMsgProcessTag -> sendMsg OMsgProcessTag >> nextMsg
     _              -> return msg

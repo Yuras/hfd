@@ -10,17 +10,26 @@ where
 
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString, empty, pack, append)
+import qualified Data.ByteString.Char8 as BSChar
 import Data.Word (Word32, Word16)
 import Data.Bits (shiftR)
 
 -- | Messages that debugger can send to player
 data OMsg
-  = OMsgContinue                     -- ^ 0F or 15
-  | OMsgSetBreakpoint Word16 Word16  -- ^ 11 or 17
-  | OMsgNext                         -- ^ 14 or 20
-  | OMsgStep                         -- ^ 15 or 21
-  | OMsgProcessTag                   -- ^ 17 or 23
-  | OMsgGetFunctionFrame Word32      -- ^ 1A or 26
+  -- | 0F or 15
+  = OMsgContinue
+  -- | 11 or 17
+  | OMsgSetBreakpoint Word16 Word16
+  -- | 14 or 20
+  | OMsgNext
+  -- | 15 or 21
+  | OMsgStep
+  -- | 17 or 23
+  | OMsgProcessTag
+  -- | 1A or 26
+  | OMsgGetFunctionFrame Word32
+  -- | 1C or 28
+  | OMsgSetDebuggerOptions String String
 
 -- | Convert `OMsg` to `ByteString`
 binOMsg :: OMsg -> ByteString
@@ -30,6 +39,7 @@ binOMsg OMsgNext                     = mkBin 20 empty
 binOMsg OMsgStep                     = mkBin 21 empty
 binOMsg OMsgProcessTag               = mkBin 23 empty
 binOMsg (OMsgGetFunctionFrame depth) = mkBin 26 (mkBinWord32 depth)
+binOMsg (OMsgSetDebuggerOptions n v) = mkBin 28 (s2bs n `append` pack [0] `append` s2bs v `append` pack [0])
 
 -- | Make binary message
 --
@@ -61,4 +71,8 @@ mkBinWord16 i = pack w
     [ fromIntegral i
     , fromIntegral (i `shiftR` 8)
     ]
+
+-- | Convert `String` to `ByteString`
+s2bs :: String -> ByteString
+s2bs = BSChar.pack
 
