@@ -13,7 +13,7 @@ import Data.ByteString (hPut)
 import Data.ByteString.Char8 (unpack)
 import System.IO (Handle, hClose, hSetBinaryMode, hFlush)
 import System.Console.Haskeline (getInputLine)
-import Control.Monad (when)
+import Control.Monad (when, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (get)
 import Control.Monad.IO.Class(liftIO, MonadIO)
@@ -45,22 +45,21 @@ acceptPlayer = bracket
   accept
 
 -- | Main app
-app :: Handle  -- ^ Output stream to communicate with player
-    -> App IO ()
-app h = do
-  processUntillBreak h
-  exit <- processUserInput h
-  when (not exit) (app h) 
+app :: App IO ()
+app = do
+  processUntillBreak
+  exit <- processUserInput
+  when (not exit) app
 
 -- | Process player's messages until 'IMsgBreakHitEx' received
-processUntillBreak :: Handle -> App IO ()
-processUntillBreak h = do
+processUntillBreak :: App IO ()
+processUntillBreak = do
   msg <- nextIMessage
   liftIO $ print msg
   case msg of
     IMsgBreakHitEx _ _ _       -> printSourceLine msg >> return ()
-    IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak h
-    _                          -> processUntillBreak h
+    IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak
+    _                          -> processUntillBreak
 
 -- | Print current source line
 printSourceLine :: IMsg -> App IO ()
@@ -94,31 +93,30 @@ processFileEntry (IMsgSwdFileEntry idi _ nm _ _) = do
 processFileEntry _ = error "processFileEntry: something is wrong..."
 
 -- | Read user command and process it
-processUserInput :: Handle -> App IO Bool
-processUserInput h = do
+processUserInput :: App IO Bool
+processUserInput = do
   l <- lift $ getInputLine "hfb> "
   let cmd = l >>= parseUCmd
   liftIO $ print cmd
   if isNothing cmd
-    then processUserInput h
-    else processCmd h (fromJust cmd)
+    then processUserInput
+    else processCmd (fromJust cmd)
 
 -- | Actualy process user command
-processCmd :: Handle       -- ^ Output stream to player
-           -> UCmd         -- ^ User command
+processCmd :: UCmd         -- ^ User command
            -> App IO Bool  -- ^ whether to exit
-processCmd _ UCmdQuit       = return True
-processCmd h UCmdContinue   = doContinue h
-processCmd h UCmdStep       = doStep h
-processCmd h UCmdNext       = doNext h
-processCmd h (UCmdInfo cmd) = processInfoCmd cmd >> processUserInput h
-processCmd h (UCmdPrint v)  = doPrint h v >> processUserInput h
-processCmd h UCmdTest       = doGetFrame h >> processUserInput h
+processCmd UCmdQuit       = return True
+processCmd UCmdContinue   = doContinue
+processCmd UCmdStep       = doStep
+processCmd UCmdNext       = doNext
+processCmd (UCmdInfo cmd) = processInfoCmd cmd >> processUserInput
+processCmd (UCmdPrint v)  = doPrint v >> processUserInput
+processCmd UCmdTest       = doGetFrame >> processUserInput
 
 -- | Print variable
-doPrint :: Handle -> String -> App IO ()
-doPrint h v = do
-  _ <- doGetFrame h
+doPrint :: MonadIO m => String -> App m ()
+doPrint v = do
+  _ <- doGetFrame
   msg <- nextIMessage
   case msg of
     IMsgFunctionFrame _ _ _ vs -> findValue vs
@@ -129,38 +127,40 @@ doPrint h v = do
     liftIO $ print vs'
 
 -- | Process @info@ command
-processInfoCmd :: InfoCmd -> App IO ()
+processInfoCmd :: MonadIO m => InfoCmd -> App m ()
 processInfoCmd ICFiles = printFiles
   where
   printFiles = do
-    files <- lift . lift $ fmap asFiles get
+    files <- lift . lift $ liftM asFiles get
     liftIO $ mapM_ (printFile) files
   printFile (idi, FileEntry name _) =
     putStrLn $ "#" ++ show idi ++ ": " ++ name
 
 -- | Get function frame
-doGetFrame :: MonadIO m => Handle -> App m Bool
-doGetFrame h = do
-  sendMsg h (OMsgGetFunctionFrame 0)
+doGetFrame :: MonadIO m => App m Bool
+doGetFrame = do
+  sendMsg (OMsgGetFunctionFrame 0)
   return True;
 
 -- | Send @continue@ command to player
-doContinue :: MonadIO m => Handle -> App m Bool
-doContinue h =  sendMsg h OMsgContinue
-             >> return False
+doContinue :: MonadIO m => App m Bool
+doContinue =  sendMsg OMsgContinue
+           >> return False
 
 -- | Send @step@ command to player
-doStep :: MonadIO m => Handle -> App m Bool
-doStep h =  sendMsg h OMsgStep
-         >> return False
+doStep :: MonadIO m => App m Bool
+doStep =  sendMsg OMsgStep
+       >> return False
 
 -- | Send @next@ command to player
-doNext :: MonadIO m => Handle -> App m Bool
-doNext h =  sendMsg h OMsgNext
-         >> return False
+doNext :: MonadIO m => App m Bool
+doNext =  sendMsg OMsgNext
+       >> return False
 
 -- | Send message to player
-sendMsg :: MonadIO m => Handle -> OMsg -> App m ()
-sendMsg h msg =  liftIO $ hPut h (binOMsg msg)
-              >> hFlush h
+sendMsg :: MonadIO m => OMsg -> App m ()
+sendMsg msg = do
+  h <- lift . lift $ liftM asHandle get
+  liftIO $ hPut h (binOMsg msg) >> hFlush h
+  return ()
 

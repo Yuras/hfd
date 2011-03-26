@@ -27,19 +27,19 @@ type App m = Iteratee ByteString (InputT (StateT AppState m))
 -- | Run App monad
 runApp :: Handle                -- ^ Input/Output stream to be used
                                 -- to communicate with player
-       -> (Handle -> App IO a)  -- ^ Application; 
-                                -- handle -- output stream to player
+       -> App IO a              -- ^ Application
        -> IO a
-runApp h app = flip evalStateT defaultState $
-  runInputT defaultSettings (enumHandle 1 h (app h) >>= run)
+runApp h app = flip evalStateT (defaultState h) $
+  runInputT defaultSettings (enumHandle 1 h app >>= run)
 
 -- | Application state
 data AppState = AppState {
-  asFiles :: [(Int, FileEntry)]  -- ^ map of file entries
+  asFiles :: [(Int, FileEntry)],  -- ^ map of file entries
+  asHandle :: Handle              -- ^ handle to player
 } deriving Show
 
 -- | Default application state contains nothing
-defaultState :: AppState
+defaultState :: Handle -> AppState
 defaultState = AppState []
 
 -- | File entry represents one source file
