@@ -22,7 +22,7 @@ import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
 import App (App, runApp, FileEntry(..), addFileEntry, AppState(..))
-import IMsg (IMsg(..), nextIMessage)
+import IMsg (IMsg(..), nextIMessage, AMF(..))
 import OMsg (OMsg(..), binOMsg)
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 
@@ -48,19 +48,19 @@ acceptPlayer = bracket
 app :: Handle  -- ^ Output stream to communicate with player
     -> App IO ()
 app h = do
-  processUntillBreak
+  processUntillBreak h
   exit <- processUserInput h
   when (not exit) (app h) 
 
 -- | Process player's messages until 'IMsgBreakHitEx' received
-processUntillBreak :: App IO ()
-processUntillBreak = do
+processUntillBreak :: Handle -> App IO ()
+processUntillBreak h = do
   msg <- nextIMessage
   liftIO $ print msg
   case msg of
     IMsgBreakHitEx _ _ _       -> printSourceLine msg >> return ()
-    IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak
-    _                          -> processUntillBreak
+    IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak h
+    _                          -> processUntillBreak h
 
 -- | Print current source line
 printSourceLine :: IMsg -> App IO ()
@@ -83,7 +83,7 @@ printSourceLine _ = error "printSourceLine: something is wrong..."
 processFileEntry :: MonadIO m => IMsg -> App m ()
 processFileEntry (IMsgSwdFileEntry idi _ nm _ _) = do
   content <- liftIO readFile'
-  liftIO $ print content
+  -- liftIO $ print content
   addFileEntry (fromIntegral idi, FileEntry name (lines content))
   where
   name = unpack nm
@@ -112,6 +112,21 @@ processCmd h UCmdContinue   = doContinue h
 processCmd h UCmdStep       = doStep h
 processCmd h UCmdNext       = doNext h
 processCmd h (UCmdInfo cmd) = processInfoCmd cmd >> processUserInput h
+processCmd h (UCmdPrint v)  = doPrint h v >> processUserInput h
+processCmd h UCmdTest       = doGetFrame h >> processUserInput h
+
+-- | Print variable
+doPrint :: Handle -> String -> App IO ()
+doPrint h v = do
+  _ <- doGetFrame h
+  msg <- nextIMessage
+  case msg of
+    IMsgFunctionFrame _ _ _ vs -> findValue vs
+    _ -> liftIO $ putStrLn "Unexpected message from player"
+  where
+  findValue vs = do
+    let vs' = filter (\a -> amfName a == v) vs
+    liftIO $ print vs'
 
 -- | Process @info@ command
 processInfoCmd :: InfoCmd -> App IO ()
@@ -122,6 +137,12 @@ processInfoCmd ICFiles = printFiles
     liftIO $ mapM_ (printFile) files
   printFile (idi, FileEntry name _) =
     putStrLn $ "#" ++ show idi ++ ": " ++ name
+
+-- | Get function frame
+doGetFrame :: MonadIO m => Handle -> App m Bool
+doGetFrame h = do
+  sendMsg h (OMsgGetFunctionFrame 0)
+  return True;
 
 -- | Send @continue@ command to player
 doContinue :: MonadIO m => Handle -> App m Bool
@@ -135,7 +156,7 @@ doStep h =  sendMsg h OMsgStep
 
 -- | Send @next@ command to player
 doNext :: MonadIO m => Handle -> App m Bool
-doNext h =  sendMsg h OMsgStep
+doNext h =  sendMsg h OMsgNext
          >> return False
 
 -- | Send message to player

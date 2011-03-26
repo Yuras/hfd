@@ -4,12 +4,14 @@
 module IMsg
 (
 IMsg(..),
+AMF(..),
 nextIMessage
 )
 where
 
 import Data.Word (Word8, Word16, Word32)
 import Data.ByteString (ByteString, pack)
+import qualified Data.ByteString.Char8 as BSChar
 import qualified Data.Iteratee as I
 import Data.Iteratee (Iteratee, Endian(LSB), endianRead4, endianRead2)
 import Control.Monad (replicateM, when)
@@ -53,11 +55,29 @@ data IMsg
   | IMsgBreakHitEx Word16 Word16 [(Word16, Word16, Word32, ByteString)]
   -- | 1C or 28
   | IMsgSetField2 Word32 ByteString [Word8]
+  -- | 1F or 31
+  | IMsgFunctionFrame Word32 Word32 AMF [AMF]
   -- | 24 or 36
   | IMsgException Word32 ByteString [Word8]
   -- | All other
   | IMsgUnknown Word32 [Word8]
   deriving Show
+
+-- | Represents Action Message Format entry
+data AMF = AMF {
+  amfParent :: Word32,
+  amfName :: String,
+  amfFlags :: Word32,
+  amfValue :: AMFValue
+} deriving Show
+
+-- | Represents AMF value
+data AMFValue = AMFDouble Double
+              | AMFBool Bool
+              | AMFString ByteString
+              | AMFObject Word32 Word32 Word16 Word16 ByteString
+              | AMFNull
+              deriving Show
 
 -- | Read next message from player
 nextIMessage :: Monad m => Iteratee ByteString m IMsg
@@ -65,23 +85,24 @@ nextIMessage = do
   len <- endianRead4 e_
   idi <- endianRead4 e_
   msg <- case idi of
-           26 -> iterVersion len
-           12 -> iterMovieAttr len
-           20 -> iterNumSwdFileEntry len
-           14 -> iterSwdFileEntry len
-           19 -> iterBreakpoints len
-           15 -> iterAskBreakpoints len
-           16 -> iterBreakHit len
-           27 -> iterBreakHitEx len
-           17 -> iterBreak len
-           18 -> iterSetLocalVars len
-           03 -> iterCreateAnonymObject len
            00 -> iterMenuState len
-           28 -> iterSetField2 len
+           03 -> iterCreateAnonymObject len
+           05 -> iterTrace len
            10 -> iterSetField len
            11 -> iterDeleteField len
+           12 -> iterMovieAttr len
+           14 -> iterSwdFileEntry len
+           15 -> iterAskBreakpoints len
+           16 -> iterBreakHit len
+           17 -> iterBreak len
+           18 -> iterSetLocalVars len
+           19 -> iterBreakpoints len
+           20 -> iterNumSwdFileEntry len
            25 -> iterProcessTag len
-           05 -> iterTrace len
+           26 -> iterVersion len
+           27 -> iterBreakHitEx len
+           28 -> iterSetField2 len
+           31 -> iterFunctionFrame len
            36 -> iterException len
            _  -> iterUnknown idi len
   return msg
@@ -89,6 +110,21 @@ nextIMessage = do
 
 -- * Internals
 -- ** Iteratees to parse messages
+
+iterFunctionFrame :: Monad m => Word32 -> Iteratee ByteString m IMsg
+iterFunctionFrame len = do
+  depth <- endianRead4 e_
+  when (depth /= 0) (fail "iterFunctionFrame: depth != 0, not implemented")
+  addr <- endianRead4 e_
+  (amf, ln) <- takeAMF
+  children <- takeChildren (fromIntegral len - 4 - 4 - ln) []
+  return $ IMsgFunctionFrame depth addr amf children
+  where
+  takeChildren 0 res = return $ reverse res
+  takeChildren l res = do
+    when (l < 0) (fail "iterFunctionFrame: wrong size")
+    (amf, vl) <- takeAMF
+    takeChildren (fromIntegral l - vl) (amf : res)
 
 iterException :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterException len = do
@@ -250,4 +286,36 @@ takeStr = takeStr' [] 0
     if c == 0
       then return . (flip (,) (len + 1)) . pack . reverse $ cs
       else takeStr' (c:cs) (len + 1)
+
+-- | Read AMF
+takeAMF :: Monad m => Iteratee ByteString m (AMF, Int)
+takeAMF = do
+  parent <- endianRead4 e_
+  (name, nl) <- takeStr
+  vtype <- endianRead2 e_
+  flags <- endianRead4 e_
+  (value, vl) <- takeAMFValue vtype
+  return $ (AMF parent (bs2s name) flags value, 4 + nl + 2 + 4 + vl)
+
+-- | Read AMF value
+takeAMFValue :: Monad m => Word16 -> Iteratee ByteString m (AMFValue, Int)
+takeAMFValue 0 = do
+  (str, ln) <- takeStr
+  return (AMFDouble . read . bs2s $ str, ln)
+takeAMFValue 2 = do
+  (str, ln) <- takeStr
+  return (AMFString str, ln)
+takeAMFValue 3 = do
+  oid <- endianRead4 e_
+  tp <- endianRead4 e_
+  isF <- endianRead2 e_
+  r <- endianRead2 e_
+  (typeName, tl) <- takeStr
+  return (AMFObject oid tp isF r typeName, 4 + 4 + 2 + 2 + tl)
+takeAMFValue 5 = return (AMFNull, 0)
+takeAMFValue tp = fail $ "takeAMFValue: not implemented: " ++ show tp
+
+-- | ByteString to String
+bs2s :: ByteString -> String
+bs2s = BSChar.unpack
 

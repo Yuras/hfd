@@ -15,15 +15,17 @@ import Data.Bits (shiftR)
 
 -- | Messages that debugger can send to player
 data OMsg
-  = OMsgContinue  -- ^ 0F or 15
-  | OMsgNext      -- ^ 14 or 20
-  | OMsgStep      -- ^ 15 or 21
+  = OMsgContinue                 -- ^ 0F or 15
+  | OMsgNext                     -- ^ 14 or 20
+  | OMsgStep                     -- ^ 15 or 21
+  | OMsgGetFunctionFrame Word32  -- ^ 1A or 26
 
 -- | Convert `OMsg` to `ByteString`
 binOMsg :: OMsg -> ByteString
-binOMsg OMsgContinue = mkBin 15 empty
-binOMsg OMsgNext = mkBin 20 empty
-binOMsg OMsgStep = mkBin 21 empty
+binOMsg OMsgContinue                 = mkBin 15 empty
+binOMsg OMsgNext                     = mkBin 20 empty
+binOMsg OMsgStep                     = mkBin 21 empty
+binOMsg (OMsgGetFunctionFrame depth) = mkBin 26 (mkBinWord32 depth)
 
 -- | Make binary message
 --

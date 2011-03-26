@@ -17,6 +17,8 @@ data UCmd
   | UCmdNext
   | UCmdQuit
   | UCmdInfo InfoCmd
+  | UCmdPrint String
+  | UCmdTest  -- ^ Just for tests
   deriving Show
 
 -- | Parse user command
@@ -32,6 +34,8 @@ parseUCmd = parse . words
       "next"     | cs == [] -> Just UCmdNext
       "quit"     | cs == [] -> Just UCmdQuit
       "info"                -> fmap UCmdInfo (parseInfoCmd cs)
+      "print"               -> fmap UCmdPrint (parsePrintCmd cs)
+      "test"                -> Just UCmdTest
       _                     -> Nothing
 
 -- | Parse base command
@@ -51,11 +55,17 @@ suggestCmd cmds s = filter (isPrefixOf s) cmds
 
 -- | List of base commands
 baseCommands :: [String]
-baseCommands = ["continue", "step", "next", "quit", "info"]
+baseCommands = ["continue", "step", "next", "quit", "info", "print", "test"]
 
 -- | Returns list of base commands that maches the given prefix
 suggestBaseCmd :: String -> [String]
 suggestBaseCmd = suggestCmd baseCommands
+
+-- | Parse @print@ commands
+-- Just name of varible to print
+parsePrintCmd :: [String] -> Maybe String
+parsePrintCmd [v] = Just v
+parsePrintCmd _ = Nothing
 
 -- | Info commands
 data InfoCmd = ICFiles  -- ^ @info files@
