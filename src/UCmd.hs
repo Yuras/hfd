@@ -9,6 +9,8 @@ InfoCmd(..)
 where
 
 import Data.List (isPrefixOf)
+import Data.Char (isDigit)
+import Control.Monad (when)
 
 -- | User commands
 data UCmd
@@ -19,6 +21,7 @@ data UCmd
   | UCmdQuit
   | UCmdInfo InfoCmd
   | UCmdPrint String
+  | UCmdBreakpoint Int Int
   | UCmdTest  -- ^ Just for tests
   deriving Show
 
@@ -36,8 +39,25 @@ parseUCmd = parse . words
       "quit"     | cs == [] -> Just UCmdQuit
       "info"                -> fmap UCmdInfo (parseInfoCmd cs)
       "print"               -> fmap UCmdPrint (parsePrintCmd cs)
+      "breakpoint"          -> parseBreakpointCmd cs
       "test"                -> Just UCmdTest
       _                     -> Nothing
+
+-- | Parse @breakpoint@ command
+parseBreakpointCmd :: [String] -> Maybe UCmd
+parseBreakpointCmd [pos] = do
+  (m, res) <- head' pos
+  when (m /= '#') Nothing
+  let fl = takeWhile isDigit res
+  let res1 = drop (length fl) res
+  (m1, ln) <- head' res1
+  when (m1 /= ':') Nothing
+  when (not $ all isDigit ln) Nothing
+  return $ UCmdBreakpoint (read fl) (read ln)
+  where
+  head' [] = Nothing
+  head' (x:xs) = Just (x, xs)
+parseBreakpointCmd _     = Nothing
 
 -- | Parse base command
 parseBaseCmd :: String -> Maybe String
@@ -56,7 +76,7 @@ suggestCmd cmds s = filter (isPrefixOf s) cmds
 
 -- | List of base commands
 baseCommands :: [String]
-baseCommands = ["continue", "step", "next", "quit", "info", "print", "test"]
+baseCommands = ["continue", "step", "next", "quit", "info", "print", "breakpoint", "test"]
 
 -- | Returns list of base commands that maches the given prefix
 suggestBaseCmd :: String -> [String]

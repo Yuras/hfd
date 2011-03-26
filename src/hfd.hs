@@ -111,13 +111,24 @@ processCmd UCmdEmpty      = do
   if isJust cmd
     then processCmd (fromJust cmd)
     else processUserInput
-processCmd UCmdQuit       = return True
-processCmd UCmdContinue   = doContinue
-processCmd UCmdStep       = doStep
-processCmd UCmdNext       = doNext
-processCmd (UCmdInfo cmd) = processInfoCmd cmd >> processUserInput
-processCmd (UCmdPrint v)  = doPrint v >> processUserInput
-processCmd UCmdTest       = doGetFrame >> processUserInput
+processCmd UCmdQuit               = return True
+processCmd UCmdContinue           = doContinue
+processCmd UCmdStep               = doStep
+processCmd UCmdNext               = doNext
+processCmd (UCmdInfo cmd)         = processInfoCmd cmd >> processUserInput
+processCmd (UCmdPrint v)          = doPrint v >> processUserInput
+processCmd (UCmdBreakpoint fl ln) = doSetBreakpoint fl ln >> processUserInput
+processCmd UCmdTest               = doGetFrame >> processUserInput
+
+-- | Set breakpoint
+doSetBreakpoint :: MonadIO m => Int -> Int -> App m Bool
+doSetBreakpoint fl ln = do
+  sendMsg (OMsgSetBreakpoint (fromIntegral fl) (fromIntegral ln))
+  msg <- nextIMessage
+  case msg of
+    IMsgBreakpoints _ -> return ()
+    _ -> liftIO $ putStrLn "doSetBreakpoint: Unexpected message from player"
+  return True;
 
 -- | Print variable
 doPrint :: MonadIO m => String -> App m ()
@@ -126,7 +137,7 @@ doPrint v = do
   msg <- nextIMessage
   case msg of
     IMsgFunctionFrame _ _ _ vs -> findValue vs
-    _ -> liftIO $ putStrLn "Unexpected message from player"
+    _ -> liftIO $ putStrLn "doPrint: Unexpected message from player"
   where
   findValue vs = do
     let vs' = filter (\a -> amfName a == v) vs
