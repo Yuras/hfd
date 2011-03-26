@@ -7,7 +7,8 @@ App,
 runApp,
 AppState(..),
 FileEntry(..),
-addFileEntry
+addFileEntry,
+setLastCmd
 )
 where
 
@@ -19,6 +20,7 @@ import System.Console.Haskeline (InputT, runInputT, defaultSettings)
 import Control.Monad.Trans.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans.Class (lift)
 
+import UCmd (UCmd(..))
 import Inst ()  -- 'MonadCatchIO' instance for 'InputT'
 
 -- | App monad
@@ -35,12 +37,13 @@ runApp h app = flip evalStateT (defaultState h) $
 -- | Application state
 data AppState = AppState {
   asFiles :: [(Int, FileEntry)],  -- ^ map of file entries
+  asLastCmd :: Maybe UCmd,        -- ^ last command entered by user
   asHandle :: Handle              -- ^ handle to player
 } deriving Show
 
 -- | Default application state contains nothing
 defaultState :: Handle -> AppState
-defaultState = AppState []
+defaultState = AppState [] Nothing
 
 -- | File entry represents one source file
 data FileEntry = FileEntry {
@@ -57,4 +60,11 @@ addFileEntry fe = do
   state <- lift $ lift get
   let fes = asFiles state
   lift . lift $ put state {asFiles = fe : fes}
+
+-- | Set last cmd entered by user
+setLastCmd :: Monad m => Maybe UCmd -> App m ()
+setLastCmd (Just UCmdEmpty) = return ()
+setLastCmd cmd = lift . lift $ do
+  state <- get
+  put $ state {asLastCmd = cmd}
 

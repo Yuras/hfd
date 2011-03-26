@@ -21,7 +21,7 @@ import Control.Exception (bracket)
 import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
-import App (App, runApp, FileEntry(..), addFileEntry, AppState(..))
+import App (App, runApp, FileEntry(..), addFileEntry, AppState(..), setLastCmd)
 import IMsg (IMsg(..), nextIMessage, AMF(..))
 import OMsg (OMsg(..), binOMsg)
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
@@ -98,6 +98,7 @@ processUserInput = do
   l <- lift $ getInputLine "hfb> "
   let cmd = l >>= parseUCmd
   liftIO $ print cmd
+  setLastCmd cmd
   if isNothing cmd
     then processUserInput
     else processCmd (fromJust cmd)
@@ -105,6 +106,11 @@ processUserInput = do
 -- | Actualy process user command
 processCmd :: UCmd         -- ^ User command
            -> App IO Bool  -- ^ whether to exit
+processCmd UCmdEmpty      = do
+  cmd <- lift . lift $ liftM asLastCmd get
+  if isJust cmd
+    then processCmd (fromJust cmd)
+    else processUserInput
 processCmd UCmdQuit       = return True
 processCmd UCmdContinue   = doContinue
 processCmd UCmdStep       = doStep

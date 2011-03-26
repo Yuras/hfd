@@ -12,7 +12,8 @@ import Data.List (isPrefixOf)
 
 -- | User commands
 data UCmd
-  = UCmdContinue
+  = UCmdEmpty           -- ^ empty command, previous command should be used
+  | UCmdContinue
   | UCmdStep
   | UCmdNext
   | UCmdQuit
@@ -25,7 +26,7 @@ data UCmd
 parseUCmd :: String -> Maybe UCmd
 parseUCmd = parse . words
   where
-  parse [] = Nothing
+  parse [] = Just UCmdEmpty
   parse (c:cs) = do
     cmd <- parseBaseCmd c
     case cmd of
