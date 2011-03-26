@@ -1,4 +1,3 @@
-
 # hfd
 
 ## About
@@ -16,7 +15,7 @@ So the idea is to create flash debugger with user friendly interface and good pr
 
 You need Haskell Platform to install hfd.
 
-  $ cd hfd
-  $ cabal update
-  $ cabal install
+    $ cd hfd
+    $ cabal update
+    $ cabal install
 
