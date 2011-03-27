@@ -6,6 +6,7 @@ module IMsg
 IMsg(..),
 AMF(..),
 AMFValue(..),
+amfUndecoratedName,
 nextIMessage
 )
 where
@@ -75,6 +76,9 @@ data AMF = AMF {
   amfFlags :: Word32,
   amfValue :: AMFValue
 } deriving Show
+
+amfUndecoratedName :: AMF -> String
+amfUndecoratedName = reverse . takeWhile (/= ':') . reverse . amfName
 
 -- | Represents AMF value
 data AMFValue = AMFDouble Double

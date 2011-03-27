@@ -22,7 +22,7 @@ import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
 import App (App, runApp, FileEntry(..), addFileEntry, AppState(..), setLastCmd)
-import IMsg (IMsg(..), nextIMessage, AMF(..), AMFValue(..))
+import IMsg (IMsg(..), nextIMessage, AMF(..), AMFValue(..), amfUndecoratedName)
 import OMsg (OMsg(..), binOMsg)
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 
@@ -158,7 +158,7 @@ doPrint v = do
     _ -> liftIO $ putStrLn "doPrint: Unexpected message from player"
   where
   findValue vs = do
-    let vs' = filter (\a -> amfName a == head v) vs
+    let vs' = filter (\a -> amfUndecoratedName a == head v) vs
     liftIO $ print vs'
     when (not $ null vs') (doPrintProps (tail v) (amfValue $ head vs'))
 
@@ -170,7 +170,7 @@ doPrintProps (name:ns) (AMFObject ptr _ _ _ _) = do
   msg <- nextMsg
   case msg of
     IMsgGetField _ vs ->
-      let vs' = filter (\a -> amfName a == name) vs in
+      let vs' = filter (\a -> amfUndecoratedName a == name) vs in
       case vs' of
         [] -> liftIO $ putStrLn "Not found"
         [v] -> if null ns
