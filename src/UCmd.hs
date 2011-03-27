@@ -19,6 +19,7 @@ data UCmd
   | UCmdContinue
   | UCmdStep
   | UCmdNext
+  | UCmdFinish
   | UCmdQuit
   | UCmdInfo InfoCmd
   | UCmdPrint [String]
@@ -38,6 +39,7 @@ parseUCmd = parse . words
       "continue" | cs == [] -> Just UCmdContinue
       "step"     | cs == [] -> Just UCmdStep
       "next"     | cs == [] -> Just UCmdNext
+      "finish"   | cs == [] -> Just UCmdFinish
       "quit"     | cs == [] -> Just UCmdQuit
       "help"     | cs == [] -> Just UCmdHelp
       "info"                -> fmap UCmdInfo (parseInfoCmd cs)
@@ -83,7 +85,7 @@ suggestCmd cmds s = filter (isPrefixOf s) cmds
 
 -- | List of base commands
 baseCommands :: [String]
-baseCommands = ["continue", "step", "next", "quit", "info", "print", "breakpoint", "help"]
+baseCommands = ["continue", "step", "next", "finish", "quit", "info", "print", "breakpoint", "help"]
 
 -- | Returns list of base commands that maches the given prefix
 suggestBaseCmd :: String -> [String]

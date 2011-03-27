@@ -24,6 +24,8 @@ data OMsg
   | OMsgNext
   -- | 15 or 21
   | OMsgStep
+  -- | 16 or 22
+  | OMsgFinish
   -- | 17 or 23
   | OMsgProcessTag
   -- | 19 or 25
@@ -35,10 +37,11 @@ data OMsg
 
 -- | Convert `OMsg` to `ByteString`
 binOMsg :: OMsg -> ByteString
-binOMsg (OMsgSetBreakpoint fl ln)    = mkBin 17 (mkBinWord32 0 `append` mkBinWord16 fl `append` mkBinWord16 ln)
 binOMsg OMsgContinue                 = mkBin 15 empty
+binOMsg (OMsgSetBreakpoint fl ln)    = mkBin 17 (mkBinWord32 0 `append` mkBinWord16 fl `append` mkBinWord16 ln)
 binOMsg OMsgNext                     = mkBin 20 empty
 binOMsg OMsgStep                     = mkBin 21 empty
+binOMsg OMsgFinish                   = mkBin 22 empty
 binOMsg OMsgProcessTag               = mkBin 23 empty
 binOMsg (OMsgGetField addr name)     = mkBin 25 (mkBinWord32 addr `append` s2bs name `append` pack [0] `append` mkBinWord32 14)
 binOMsg (OMsgGetFunctionFrame depth) = mkBin 26 (mkBinWord32 depth)

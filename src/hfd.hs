@@ -145,6 +145,7 @@ processCmd UCmdQuit               = return True
 processCmd UCmdContinue           = doContinue
 processCmd UCmdStep               = doStep
 processCmd UCmdNext               = doNext
+processCmd UCmdFinish             = doFinish
 processCmd (UCmdInfo cmd)         = processInfoCmd cmd >> processUserInput
 processCmd (UCmdPrint v)          = doPrint v >> processUserInput
 processCmd (UCmdBreakpoint fl ln) = doSetBreakpoint fl ln >> processUserInput
@@ -232,6 +233,11 @@ doStep =  sendMsg OMsgStep
 doNext :: MonadIO m => App m Bool
 doNext =  sendMsg OMsgNext
        >> return False
+
+-- | Send @finish@ command to player
+doFinish :: MonadIO m => App m Bool
+doFinish =  sendMsg OMsgFinish
+         >> return False
 
 -- | Send message to player
 sendMsg :: MonadIO m => OMsg -> App m ()
