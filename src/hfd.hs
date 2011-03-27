@@ -138,7 +138,7 @@ processUserInput = do
   let cmd = l >>= parseUCmd
   setLastCmd cmd
   if isNothing cmd
-    then processUserInput
+    then liftIO (putStrLn "Unknown command") >> processUserInput
     else processCmd (fromJust cmd)
 
 -- | Actualy process user command
