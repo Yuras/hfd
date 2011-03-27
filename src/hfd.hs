@@ -71,7 +71,7 @@ acceptPlayer = bracket
 app :: App IO ()
 app = do
   processUntillBreak
-  -- doSetDebuggerOption "break_on_fault" "on"
+  doSetDebuggerOption "break_on_fault" "on"
   -- doSetDebuggerOption "disable_script_stuck" "on"
   -- doSetDebuggerOption "disable_script_stuck_dialog" "on"
   -- doSetDebuggerOption "enumerate_override" "on"
@@ -89,9 +89,17 @@ processUntillBreak :: App IO ()
 processUntillBreak = do
   msg <- nextMsg
   case msg of
-    IMsgBreakHitEx _ _ _       -> printSourceLine msg >> return ()
+    IMsgBreakHitEx _ _ _       -> printSourceLine msg
     IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak
+    IMsgException _ _ _        -> processException msg >> processUntillBreak
     _                          -> processUntillBreak
+
+-- | Print information about exception
+processException :: MonadIO m => IMsg -> App m ()
+processException (IMsgException _ msg _) = do
+  liftIO $ putStrLn " [exception]"
+  liftIO $ putStrLn msg
+processException _ = error "processException: something is wrong"
 
 -- | Print current source line
 printSourceLine :: IMsg -> App IO ()

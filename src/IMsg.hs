@@ -64,7 +64,7 @@ data IMsg
   -- | 20 or 32
   | IMsgDebuggerOption ByteString ByteString
   -- | 24 or 36
-  | IMsgException Word32 ByteString [Word8]
+  | IMsgException Word32 String [Word8]
   -- | All other
   | IMsgUnknown Word32 [Word8]
   deriving Show
@@ -158,7 +158,7 @@ iterException len = do
   arg1 <- endianRead4 e_
   (ex, ln) <- takeStr
   arg3 <- replicateM (fromIntegral len - 4 - ln) I.head
-  return $ IMsgException arg1 ex arg3
+  return $ IMsgException arg1 (bs2s ex) arg3
 
 iterTrace :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterTrace len = do
