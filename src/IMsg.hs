@@ -95,30 +95,29 @@ nextIMessage :: Monad m => Iteratee ByteString m IMsg
 nextIMessage = do
   len <- endianRead4 e_
   idi <- endianRead4 e_
-  msg <- case idi of
-           00 -> iterMenuState len
-           03 -> iterCreateAnonymObject len
-           05 -> iterTrace len
-           10 -> iterSetField len
-           11 -> iterDeleteField len
-           12 -> iterMovieAttr len
-           14 -> iterSwdFileEntry len
-           15 -> iterAskBreakpoints len
-           16 -> iterBreakHit len
-           17 -> iterBreak len
-           18 -> iterSetLocalVars len
-           19 -> iterBreakpoints len
-           20 -> iterNumSwdFileEntry len
-           25 -> iterProcessTag len
-           26 -> iterVersion len
-           27 -> iterBreakHitEx len
-           28 -> iterSetField2 len
-           30 -> iterGetField len
-           31 -> iterFunctionFrame len
-           32 -> iterDebuggerOption len
-           36 -> iterException len
-           _  -> iterUnknown idi len
-  return msg
+  case idi of
+    00 -> iterMenuState len
+    03 -> iterCreateAnonymObject len
+    05 -> iterTrace len
+    10 -> iterSetField len
+    11 -> iterDeleteField len
+    12 -> iterMovieAttr len
+    14 -> iterSwdFileEntry len
+    15 -> iterAskBreakpoints len
+    16 -> iterBreakHit len
+    17 -> iterBreak len
+    18 -> iterSetLocalVars len
+    19 -> iterBreakpoints len
+    20 -> iterNumSwdFileEntry len
+    25 -> iterProcessTag len
+    26 -> iterVersion len
+    27 -> iterBreakHitEx len
+    28 -> iterSetField2 len
+    30 -> iterGetField len
+    31 -> iterFunctionFrame len
+    32 -> iterDebuggerOption len
+    36 -> iterException len
+    _  -> iterUnknown idi len
 
 
 -- * Internals
@@ -311,7 +310,7 @@ takeStr = takeStr' [] 0
   takeStr' cs len = do
     c <- I.head
     if c == 0
-      then return . (flip (,) (len + 1)) . pack . reverse $ cs
+      then return . flip (,) (len + 1) . pack . reverse $ cs
       else takeStr' (c:cs) (len + 1)
 
 -- | Read AMF
@@ -322,7 +321,7 @@ takeAMF = do
   vtype <- endianRead2 e_
   flags <- endianRead4 e_
   (value, vl) <- takeAMFValue vtype
-  return $ (AMF parent (bs2s name) flags value, 4 + nl + 2 + 4 + vl)
+  return (AMF parent (bs2s name) flags value, 4 + nl + 2 + 4 + vl)
 
 -- | Read AMF value
 takeAMFValue :: Monad m => Word16 -> Iteratee ByteString m (AMFValue, Int)
@@ -331,7 +330,7 @@ takeAMFValue 0 = do
   return (AMFDouble . read . bs2s $ str, ln)
 takeAMFValue 1 = do
   v <- I.head
-  return $ (AMFBool (v /= 0), 1)
+  return (AMFBool (v /= 0), 1)
 takeAMFValue 2 = do
   (str, ln) <- takeStr
   return (AMFString str, ln)

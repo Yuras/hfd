@@ -13,7 +13,7 @@ import Data.ByteString (hPut)
 import Data.ByteString.Char8 (unpack)
 import System.IO (Handle, hClose, hSetBinaryMode, hFlush)
 import System.Console.Haskeline (getInputLine)
-import Control.Monad (when, liftM)
+import Control.Monad (unless, liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (get)
 import Control.Monad.IO.Class(liftIO, MonadIO)
@@ -82,7 +82,7 @@ app = do
   where
   loop = do
     exit <- processUserInput
-    when (not exit) (processUntillBreak >> loop)
+    unless exit (processUntillBreak >> loop)
 
 -- | Process player's messages until 'IMsgBreakHitEx' received
 processUntillBreak :: App IO ()
@@ -113,7 +113,7 @@ printSourceLine (IMsgBreakHitEx file line _) = do
   srcLine files = do
     FileEntry _ content <- lookup (fromIntegral file) files
     let lln = take 1 $ drop (fromIntegral line - 1) content
-    if length lln == 0
+    if null lln
       then Nothing
       else Just $ head lln
 printSourceLine _ = error "printSourceLine: something is wrong..."
@@ -191,7 +191,7 @@ doPrint v = do
   findValue vs = do
     let vs' = filter (\a -> amfUndecoratedName a == head v) vs
     liftIO $ print vs'
-    when (not $ null vs') (doPrintProps (tail v) (amfValue $ head vs'))
+    unless (null vs') (doPrintProps (tail v) (amfValue $ head vs'))
 
 -- | Print object properties as requested
 doPrintProps :: MonadIO m => [String] -> AMFValue -> App m ()
@@ -217,7 +217,7 @@ processInfoCmd ICFiles = printFiles
   where
   printFiles = do
     files <- lift . lift $ liftM asFiles get
-    liftIO $ mapM_ (printFile) files
+    liftIO $ mapM_ printFile files
   printFile (idi, FileEntry name _) =
     putStrLn $ "#" ++ show idi ++ ": " ++ name
 

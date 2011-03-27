@@ -11,7 +11,7 @@ where
 
 import Data.List (isPrefixOf)
 import Data.Char (isDigit)
-import Control.Monad (when)
+import Control.Monad (when, unless)
 
 -- | User commands
 data UCmd
@@ -61,7 +61,7 @@ parseBreakpointCmd [pos] = do
   (m1, ln) <- head' res1
   when (null ln) Nothing
   when (m1 /= ':') Nothing
-  when (not $ all isDigit ln) Nothing
+  unless (all isDigit ln) Nothing
   return $ UCmdBreakpoint (read fl) (read ln)
   where
   head' [] = Nothing
