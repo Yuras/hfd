@@ -57,6 +57,8 @@ data IMsg
   | IMsgSetField2 Word32 ByteString [Word8]
   -- | 1F or 31
   | IMsgFunctionFrame Word32 Word32 AMF [AMF]
+  -- | 20 or 32
+  | IMsgDebuggerOption ByteString ByteString
   -- | 24 or 36
   | IMsgException Word32 ByteString [Word8]
   -- | All other
@@ -103,6 +105,7 @@ nextIMessage = do
            27 -> iterBreakHitEx len
            28 -> iterSetField2 len
            31 -> iterFunctionFrame len
+           32 -> iterDebuggerOption len
            36 -> iterException len
            _  -> iterUnknown idi len
   return msg
@@ -110,6 +113,13 @@ nextIMessage = do
 
 -- * Internals
 -- ** Iteratees to parse messages
+
+iterDebuggerOption :: Monad m => Word32 -> Iteratee ByteString m IMsg
+iterDebuggerOption len = do
+  (op, ol) <- takeStr
+  (val, vl) <- takeStr
+  when (fromIntegral len /= ol + vl) (fail "iterDebuggerOption: wrong size")
+  return $ IMsgDebuggerOption op val
 
 iterFunctionFrame :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterFunctionFrame len = do

@@ -48,13 +48,13 @@ acceptPlayer = bracket
 app :: App IO ()
 app = do
   processUntillBreak
-  -- sendMsg (OMsgSetDebuggerOptions "break_on_fault" "on")
-  -- sendMsg (OMsgSetDebuggerOptions "disable_script_stuck" "on")
-  -- sendMsg (OMsgSetDebuggerOptions "disable_script_stuck_dialog" "on")
-  -- sendMsg (OMsgSetDebuggerOptions "enumerate_override" "on")
-  sendMsg (OMsgSetDebuggerOptions "notify_on_failure" "on")
-  -- sendMsg (OMsgSetDebuggerOptions "invoke_setters" "on")
-  -- sendMsg (OMsgSetDebuggerOptions "swf_load_messages" "on")
+  -- doSetDebuggerOption "break_on_fault" "on"
+  -- doSetDebuggerOption "disable_script_stuck" "on"
+  -- doSetDebuggerOption "disable_script_stuck_dialog" "on"
+  -- doSetDebuggerOption "enumerate_override" "on"
+  doSetDebuggerOption "notify_on_failure" "on"
+  -- doSetDebuggerOption "invoke_setters" "on"
+  -- doSetDebuggerOption "swf_load_messages" "on"
   loop
   where
   loop = do
@@ -128,6 +128,15 @@ processCmd (UCmdInfo cmd)         = processInfoCmd cmd >> processUserInput
 processCmd (UCmdPrint v)          = doPrint v >> processUserInput
 processCmd (UCmdBreakpoint fl ln) = doSetBreakpoint fl ln >> processUserInput
 processCmd UCmdTest               = doGetFrame >> processUserInput
+
+-- | Set debuger option
+doSetDebuggerOption :: MonadIO m => String -> String -> App m ()
+doSetDebuggerOption op val = do
+  sendMsg (OMsgSetDebuggerOptions op val)
+  msg <- nextMsg
+  case msg of
+    IMsgDebuggerOption _ _ -> return ()
+    _ -> liftIO $ putStrLn "doSetDebuggerOption: Unexpected message from player"
 
 -- | Set breakpoint
 doSetBreakpoint :: MonadIO m => Int -> Int -> App m Bool
