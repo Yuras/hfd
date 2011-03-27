@@ -16,7 +16,8 @@ import Data.ByteString (ByteString)
 import Data.Iteratee (Iteratee, run)
 import Data.Iteratee.IO (enumHandle)
 import System.IO (Handle)
-import System.Console.Haskeline (InputT, runInputT, defaultSettings)
+import System.Environment (getEnv)
+import System.Console.Haskeline (InputT, runInputT, defaultSettings, Settings(..))
 import Control.Monad.Trans.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans.Class (lift)
 
@@ -31,8 +32,12 @@ runApp :: Handle                -- ^ Input/Output stream to be used
                                 -- to communicate with player
        -> App IO a              -- ^ Application
        -> IO a
-runApp h app = flip evalStateT (defaultState h) $
-  runInputT defaultSettings (enumHandle 1 h app >>= run)
+runApp h app = do
+  home <- getEnv "HOME"
+  print home
+  let history = home ++ "/.hfd_history"
+  flip evalStateT (defaultState h) $
+    runInputT defaultSettings {historyFile = Just history} (enumHandle 1 h app >>= run)
 
 -- | Application state
 data AppState = AppState {
