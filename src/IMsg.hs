@@ -28,7 +28,7 @@ data IMsg
   -- | 03 or 03
   | IMsgCreateAnonymObject Word32
   -- | 05 or 05
-  | IMsgTrace ByteString
+  | IMsgTrace String
   -- | 0A or 10
   | IMsgSetField Word32 ByteString [Word8]
   -- | 0B or 11
@@ -164,7 +164,7 @@ iterTrace :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterTrace len = do
   (msg, ln) <- takeStr
   when (len /= fromIntegral ln) (fail "iterTrace: wrong length")
-  return $ IMsgTrace msg
+  return $ IMsgTrace $ bs2s msg
 
 iterProcessTag :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterProcessTag len = do

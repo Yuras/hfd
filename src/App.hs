@@ -35,7 +35,6 @@ runApp :: Handle                -- ^ Input/Output stream to be used
        -> IO a
 runApp h app = do
   home <- getEnv "HOME"
-  print home
   let history = home ++ "/.hfd_history"
   flip evalStateT (defaultState h) $
     runInputT (hlSettings history) (enumHandle 1 h app >>= run)

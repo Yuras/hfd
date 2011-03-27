@@ -28,21 +28,44 @@ import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 
 -- | Entry point
 main :: IO ()
-main = withSocketsDo $ bracket
+main = withSocketsDo $ printHello >> bracket
   acceptPlayer
   (hClose . fst3)
   (start . fst3)
   where
   start h = do
+    putStrLn "Enter \'help\' for list of commands"
     hSetBinaryMode h True
     runApp h app
+
+-- | Print hello message
+printHello :: IO ()
+printHello = do
+  putStrLn "HFB: Flash Debugger version 0.0.1"
+  putStrLn "Copyright (c) 2011 Yuras Shumovich"
+  putStrLn "mailto:shumovichy@gmail.com"
+
+printHelp :: IO ()
+printHelp = do
+  printHello
+  putStrLn "List of commands:"
+  putStrLn "\thelp                          print this help"
+  putStrLn "\tquit                          quit hfd"
+  putStrLn "\tcontinue                      continue execution until breakpoint hit"
+  putStrLn "\tstep                          continue execution until different source line reached"
+  putStrLn "\tnext                          continue execution until next source line reached"
+  putStrLn "\tinfo files                    show all source files"
+  putStrLn "\tbreakpoint <fileID>:<line>    set breakpoint at the location, e.g. \'b #1:23\'"
+  putStrLn "\t                              use \'info files\' to get fileID"
+  putStrLn "\tprint <name>[.name]*          inspect variables"
+  putStrLn "Shortcuts are allowed, e.g. \'c\', \'co\', \'cont\', etc will mean \'continue\'"
 
 -- | Listen on port, accept just one client and close socket
 acceptPlayer :: IO (Handle, HostName, PortNumber)
 acceptPlayer = bracket
   (listenOn (PortNumber 7935))
   sClose
-  accept
+  (\s -> putStrLn "Waiting for player..." >> accept s)
 
 -- | Main app
 app :: App IO ()
@@ -76,7 +99,7 @@ printSourceLine (IMsgBreakHitEx file line _) = do
   files <- lift . lift $ fmap asFiles get
   let mln = srcLine files
   if isJust mln
-    then liftIO $ putStrLn $ fromJust mln
+    then liftIO $ putStrLn $ " " ++ show line ++ ": " ++ fromJust mln
     else liftIO $ putStrLn "No source"
   where
   srcLine files = do
@@ -91,7 +114,6 @@ printSourceLine _ = error "printSourceLine: something is wrong..."
 processFileEntry :: MonadIO m => IMsg -> App m ()
 processFileEntry (IMsgSwdFileEntry idi _ nm _ _) = do
   content <- liftIO readFile'
-  -- liftIO $ print content
   addFileEntry (fromIntegral idi, FileEntry name (lines content))
   where
   name = unpack nm
@@ -106,7 +128,6 @@ processUserInput :: App IO Bool
 processUserInput = do
   l <- lift $ getInputLine "hfb> "
   let cmd = l >>= parseUCmd
-  liftIO $ print cmd
   setLastCmd cmd
   if isNothing cmd
     then processUserInput
@@ -128,6 +149,7 @@ processCmd (UCmdInfo cmd)         = processInfoCmd cmd >> processUserInput
 processCmd (UCmdPrint v)          = doPrint v >> processUserInput
 processCmd (UCmdBreakpoint fl ln) = doSetBreakpoint fl ln >> processUserInput
 processCmd UCmdTest               = doGetFrame >> processUserInput
+processCmd UCmdHelp               = liftIO printHelp >> processUserInput
 
 -- | Set debuger option
 doSetDebuggerOption :: MonadIO m => String -> String -> App m ()
@@ -178,7 +200,7 @@ doPrintProps (name:ns) (AMFObject ptr _ _ _ _) = do
                  else doPrintProps ns (amfValue v)
         _ -> liftIO $ putStrLn "Multiple"
     _ -> return ()
-doPrintProps _ _ = liftIO $ print "Not found"
+doPrintProps _ _ = liftIO $ putStrLn "Not found"
 
 -- | Process @info@ command
 processInfoCmd :: MonadIO m => InfoCmd -> App m ()
@@ -221,11 +243,13 @@ sendMsg msg = do
 -- | Take next message
 -- This function is just a wrapper around nextIMessage,
 -- the only difference is that it responses to `IMsgProcessTag` message
+-- and prints traces
 nextMsg :: MonadIO m => App m IMsg
 nextMsg = do
   msg <- nextIMessage
-  liftIO $ print msg
+  -- liftIO $ print msg
   case msg of
     IMsgProcessTag -> sendMsg OMsgProcessTag >> nextMsg
+    IMsgTrace str  -> liftIO (putStrLn $ " [trace] " ++ str) >> nextMsg
     _              -> return msg
 
