@@ -4,7 +4,8 @@ module UCmd
 (
 UCmd(..),
 parseUCmd,
-InfoCmd(..)
+InfoCmd(..),
+suggestBaseCmd
 )
 where
 
