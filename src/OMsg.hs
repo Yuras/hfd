@@ -26,6 +26,8 @@ data OMsg
   | OMsgStep
   -- | 17 or 23
   | OMsgProcessTag
+  -- | 19 or 25
+  | OMsgGetField Word32 String
   -- | 1A or 26
   | OMsgGetFunctionFrame Word32
   -- | 1C or 28
@@ -38,6 +40,7 @@ binOMsg OMsgContinue                 = mkBin 15 empty
 binOMsg OMsgNext                     = mkBin 20 empty
 binOMsg OMsgStep                     = mkBin 21 empty
 binOMsg OMsgProcessTag               = mkBin 23 empty
+binOMsg (OMsgGetField addr name)     = mkBin 25 (mkBinWord32 addr `append` s2bs name `append` pack [0] `append` mkBinWord32 14)
 binOMsg (OMsgGetFunctionFrame depth) = mkBin 26 (mkBinWord32 depth)
 binOMsg (OMsgSetDebuggerOptions n v) = mkBin 28 (s2bs n `append` pack [0] `append` s2bs v `append` pack [0])
 

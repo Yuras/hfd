@@ -5,6 +5,7 @@ module IMsg
 (
 IMsg(..),
 AMF(..),
+AMFValue(..),
 nextIMessage
 )
 where
@@ -55,6 +56,8 @@ data IMsg
   | IMsgBreakHitEx Word16 Word16 [(Word16, Word16, Word32, ByteString)]
   -- | 1C or 28
   | IMsgSetField2 Word32 ByteString [Word8]
+  -- | 1E or 30
+  | IMsgGetField AMF [AMF]
   -- | 1F or 31
   | IMsgFunctionFrame Word32 Word32 AMF [AMF]
   -- | 20 or 32
@@ -79,6 +82,8 @@ data AMFValue = AMFDouble Double
               | AMFString ByteString
               | AMFObject Word32 Word32 Word16 Word16 ByteString
               | AMFNull
+              | AMFUndefined
+              | AMFTrails
               deriving Show
 
 -- | Read next message from player
@@ -104,6 +109,7 @@ nextIMessage = do
            26 -> iterVersion len
            27 -> iterBreakHitEx len
            28 -> iterSetField2 len
+           30 -> iterGetField len
            31 -> iterFunctionFrame len
            32 -> iterDebuggerOption len
            36 -> iterException len
@@ -113,6 +119,12 @@ nextIMessage = do
 
 -- * Internals
 -- ** Iteratees to parse messages
+
+iterGetField :: Monad m => Word32 -> Iteratee ByteString m IMsg
+iterGetField len = do
+  (amf, ln) <- takeAMF
+  children <- takeChildren (fromIntegral len - ln) []
+  return $ IMsgGetField amf children
 
 iterDebuggerOption :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterDebuggerOption len = do
@@ -129,12 +141,13 @@ iterFunctionFrame len = do
   (amf, ln) <- takeAMF
   children <- takeChildren (fromIntegral len - 4 - 4 - ln) []
   return $ IMsgFunctionFrame depth addr amf children
-  where
-  takeChildren 0 res = return $ reverse res
-  takeChildren l res = do
-    when (l < 0) (fail "iterFunctionFrame: wrong size")
-    (amf, vl) <- takeAMF
-    takeChildren (fromIntegral l - vl) (amf : res)
+
+takeChildren :: Monad m => Int -> [AMF] -> Iteratee ByteString m [AMF]
+takeChildren 0 res = return $ reverse res
+takeChildren l res = do
+  when (l < 0) (fail "iterFunctionFrame: wrong size")
+  (amf, vl) <- takeAMF
+  takeChildren (fromIntegral l - vl) (amf : res)
 
 iterException :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterException len = do
@@ -312,6 +325,9 @@ takeAMFValue :: Monad m => Word16 -> Iteratee ByteString m (AMFValue, Int)
 takeAMFValue 0 = do
   (str, ln) <- takeStr
   return (AMFDouble . read . bs2s $ str, ln)
+takeAMFValue 1 = do
+  v <- I.head
+  return $ (AMFBool (v /= 0), 1)
 takeAMFValue 2 = do
   (str, ln) <- takeStr
   return (AMFString str, ln)
@@ -323,6 +339,8 @@ takeAMFValue 3 = do
   (typeName, tl) <- takeStr
   return (AMFObject oid tp isF r typeName, 4 + 4 + 2 + 2 + tl)
 takeAMFValue 5 = return (AMFNull, 0)
+takeAMFValue 6 = return (AMFUndefined, 0)
+takeAMFValue 19 = return (AMFTrails, 0)
 takeAMFValue tp = fail $ "takeAMFValue: not implemented: " ++ show tp
 
 -- | ByteString to String

@@ -20,7 +20,7 @@ data UCmd
   | UCmdNext
   | UCmdQuit
   | UCmdInfo InfoCmd
-  | UCmdPrint String
+  | UCmdPrint [String]
   | UCmdBreakpoint Int Int
   | UCmdTest  -- ^ Just for tests
   deriving Show
@@ -88,8 +88,13 @@ suggestBaseCmd = suggestCmd baseCommands
 
 -- | Parse @print@ commands
 -- Just name of varible to print
-parsePrintCmd :: [String] -> Maybe String
-parsePrintCmd [v] = Just v
+parsePrintCmd :: [String] -> Maybe [String]
+parsePrintCmd [v] = Just $ props v
+  where
+  props s = let (l, s') = break (== '.') s
+            in l : case s' of
+                     []      -> []
+                     (_:s'') -> props s''
 parsePrintCmd _ = Nothing
 
 -- | Info commands

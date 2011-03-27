@@ -22,7 +22,7 @@ import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
 import App (App, runApp, FileEntry(..), addFileEntry, AppState(..), setLastCmd)
-import IMsg (IMsg(..), nextIMessage, AMF(..))
+import IMsg (IMsg(..), nextIMessage, AMF(..), AMFValue(..))
 import OMsg (OMsg(..), binOMsg)
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 
@@ -149,7 +149,7 @@ doSetBreakpoint fl ln = do
   return True;
 
 -- | Print variable
-doPrint :: MonadIO m => String -> App m ()
+doPrint :: MonadIO m => [String] -> App m ()
 doPrint v = do
   _ <- doGetFrame
   msg <- nextMsg
@@ -158,8 +158,27 @@ doPrint v = do
     _ -> liftIO $ putStrLn "doPrint: Unexpected message from player"
   where
   findValue vs = do
-    let vs' = filter (\a -> amfName a == v) vs
+    let vs' = filter (\a -> amfName a == head v) vs
     liftIO $ print vs'
+    when (not $ null vs') (doPrintProps (tail v) (amfValue $ head vs'))
+
+-- | Print object properties as requested
+doPrintProps :: MonadIO m => [String] -> AMFValue -> App m ()
+doPrintProps [] _ = return ()
+doPrintProps (name:ns) (AMFObject ptr _ _ _ _) = do
+  sendMsg (OMsgGetField ptr "")
+  msg <- nextMsg
+  case msg of
+    IMsgGetField _ vs ->
+      let vs' = filter (\a -> amfName a == name) vs in
+      case vs' of
+        [] -> liftIO $ putStrLn "Not found"
+        [v] -> if null ns
+                 then liftIO $ print v
+                 else doPrintProps ns (amfValue v)
+        _ -> liftIO $ putStrLn "Multiple"
+    _ -> return ()
+doPrintProps _ _ = liftIO $ print "Not found"
 
 -- | Process @info@ command
 processInfoCmd :: MonadIO m => InfoCmd -> App m ()
