@@ -39,7 +39,7 @@ doPrintProps (name:ns) (AMF _ _ _ (AMFObject ptr _ _ _ _)) = do
       [] -> liftIO $ putStrLn "Not found"
       [v] -> if null ns
                then callGetter v >>= (liftIO . putStrLn . prettyAMF)
-               else doPrintProps ns v
+               else callGetter v >>= doPrintProps ns
       _ -> liftIO $ putStrLn "Multiple"
 doPrintProps _ _ = liftIO $ putStrLn "Not found"
 
