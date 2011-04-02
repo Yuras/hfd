@@ -167,8 +167,27 @@ processCmd (UCmdInfo cmd)         = processInfoCmd cmd >> processUserInput
 processCmd (UCmdPrint v)          = doPrint v >> processUserInput
 processCmd (UCmdBreakpoint fl ln) = setBreakpoint fl ln >> processUserInput
 processCmd UCmdStack              = printStack >> processUserInput
+processCmd UCmdList               = listSource >> processUserInput
 processCmd UCmdTest               = processUserInput
 processCmd UCmdHelp               = liftIO printHelp >> processUserInput
+
+-- | Print source around current position
+listSource :: MonadIO m => App m ()
+listSource = do
+  stack <- lift . lift $ liftM asStack get
+  if null stack
+    then liftIO $ putStrLn "No source"
+    else print' $ head stack
+  where
+  print' (fl, ln, _) = do
+    fs <- lift . lift $ liftM asFiles get
+    let f = lookup fl fs
+    if isNothing f
+      then liftIO $ putStrLn "No source"
+      else liftIO $ mapM_ printLine $ take 11 $ drop (ln - 6) (zip allLines $ feContent $ fromJust f)
+  printLine (ln, cont) = putStrLn $ " " ++ show ln ++ ": " ++ cont
+  allLines :: [Int]
+  allLines = [1..]
 
 -- | Print current stack
 printStack :: MonadIO m => App m ()
