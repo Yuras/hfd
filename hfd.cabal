@@ -27,6 +27,8 @@ Executable hfd
                      Inst,
                      IMsg,
                      OMsg,
-                     UCmd
+                     UCmd,
+                     Print,
+                     Proto
   Ghc-options:       -Wall -Werror -fno-warn-orphans
 
