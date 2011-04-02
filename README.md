@@ -28,15 +28,17 @@ hfd supports most of basic debugger features
 * inspect variable
 * inspect properties (call getters)
 * break on exception
+* show call stack
 * haskeline user interface (commands history, basic completion)
 
 Features, that are not implemented still
 
-* show call stack
+* list source code
 * walk through call stack
 * manage breakpoint (list, delete, enable/disable)
 * conditional breakpoints
 * expression evaluation
 * set variables
+* print arguments when printing call stack
 * improved completion
 

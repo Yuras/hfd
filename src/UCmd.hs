@@ -9,7 +9,7 @@ suggestBaseCmd
 )
 where
 
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, find)
 import Data.Char (isDigit)
 import Control.Monad (when, unless)
 
@@ -25,6 +25,7 @@ data UCmd
   | UCmdPrint [String]
   | UCmdBreakpoint Int Int
   | UCmdHelp
+  | UCmdStack
   | UCmdTest  -- ^ Just for tests
   deriving Show
 
@@ -45,6 +46,9 @@ parseUCmd = parse . words
       "info"                -> fmap UCmdInfo (parseInfoCmd cs)
       "print"               -> fmap UCmdPrint (parsePrintCmd cs)
       "breakpoint"          -> parseBreakpointCmd cs
+      "b"                   -> parseBreakpointCmd cs
+      "backtrace" | cs == [] -> Just UCmdStack
+      "bt"       | cs == [] -> Just UCmdStack
       "test"                -> Just UCmdTest
       _                     -> Nothing
 
@@ -73,7 +77,7 @@ parseBaseCmd :: String -> Maybe String
 parseBaseCmd s =
   if length condidates == 1
     then Just $ head condidates
-    else Nothing
+    else find (== s) condidates
   where
   condidates = suggestBaseCmd s
 
@@ -85,7 +89,7 @@ suggestCmd cmds s = filter (isPrefixOf s) cmds
 
 -- | List of base commands
 baseCommands :: [String]
-baseCommands = ["continue", "step", "next", "finish", "quit", "info", "print", "breakpoint", "help"]
+baseCommands = ["continue", "step", "next", "finish", "quit", "info", "print", "breakpoint", "help", "backtrace", "bt", "b"]
 
 -- | Returns list of base commands that maches the given prefix
 suggestBaseCmd :: String -> [String]

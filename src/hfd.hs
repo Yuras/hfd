@@ -60,6 +60,7 @@ printHelp = do
   putStrLn "\tbreakpoint <fileID>:<line>    set breakpoint at the location, e.g. \'b #1:23\'"
   putStrLn "\t                              use \'info files\' to get fileID"
   putStrLn "\tprint <name>[.name]*          inspect variables"
+  putStrLn "\tbacktrace (bt)                show call stack"
   putStrLn "Shortcuts are allowed, e.g. \'c\', \'co\', \'cont\', etc will mean \'continue\'"
 
 -- | Listen on port, accept just one client and close socket
@@ -165,8 +166,23 @@ processCmd UCmdFinish             = execFinish >> return False
 processCmd (UCmdInfo cmd)         = processInfoCmd cmd >> processUserInput
 processCmd (UCmdPrint v)          = doPrint v >> processUserInput
 processCmd (UCmdBreakpoint fl ln) = setBreakpoint fl ln >> processUserInput
+processCmd UCmdStack              = printStack >> processUserInput
 processCmd UCmdTest               = processUserInput
 processCmd UCmdHelp               = liftIO printHelp >> processUserInput
+
+-- | Print current stack
+printStack :: MonadIO m => App m ()
+printStack = do
+  state <- lift . lift $ get
+  let stack = asStack state
+  let files = asFiles state
+  liftIO $ mapM_ (print' files) stack
+  where
+  print' fs (fl, ln, fn) = putStrLn $ fn ++ "() at " ++ file fs fl ++ ":" ++ show ln
+  file fs fl = let fe = lookup fl fs in
+    if isJust fe
+      then fePath (fromJust fe)
+      else "(no source)"
 
 -- | Process @info@ command
 processInfoCmd :: MonadIO m => InfoCmd -> App m ()
