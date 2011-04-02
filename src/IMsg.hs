@@ -83,8 +83,8 @@ amfUndecoratedName = reverse . takeWhile (/= ':') . reverse . amfName
 -- | Represents AMF value
 data AMFValue = AMFDouble Double
               | AMFBool Bool
-              | AMFString ByteString
-              | AMFObject Word32 Word32 Word16 Word16 ByteString
+              | AMFString String
+              | AMFObject Word32 Word32 Word16 Word16 String
               | AMFNull
               | AMFUndefined
               | AMFTrails
@@ -333,14 +333,14 @@ takeAMFValue 1 = do
   return (AMFBool (v /= 0), 1)
 takeAMFValue 2 = do
   (str, ln) <- takeStr
-  return (AMFString str, ln)
+  return (AMFString (bs2s str), ln)
 takeAMFValue 3 = do
   oid <- endianRead4 e_
   tp <- endianRead4 e_
   isF <- endianRead2 e_
   r <- endianRead2 e_
   (typeName, tl) <- takeStr
-  return (AMFObject oid tp isF r typeName, 4 + 4 + 2 + 2 + tl)
+  return (AMFObject oid tp isF r (bs2s typeName), 4 + 4 + 2 + 2 + tl)
 takeAMFValue 5 = return (AMFNull, 0)
 takeAMFValue 6 = return (AMFUndefined, 0)
 takeAMFValue 19 = return (AMFTrails, 0)
