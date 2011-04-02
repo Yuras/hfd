@@ -9,6 +9,7 @@ execStep,
 execNext,
 getFrame,
 getField,
+getProp,
 nextMsg
 )
 where
@@ -90,6 +91,15 @@ getField ptr name = do
     _ -> liftIO (putStrLn "Unexpected message from player") >>
          return []
 
+getProp :: MonadIO m => Word32 -> String -> App m (Maybe AMF)
+getProp ptr name = do
+  sendMsg (OMsgGetField ptr name)
+  msg <- nextMsg
+  case msg of
+    IMsgGetField v _ -> return $ Just v
+    _ -> liftIO (putStrLn "Unexpected message from player") >>
+          return Nothing
+
 -- | Take next message
 -- This function is just a wrapper around nextIMessage,
 -- the only difference is that it responses to `IMsgProcessTag` message
@@ -99,6 +109,11 @@ nextMsg = do
   msg <- nextIMessage
   -- liftIO $ print msg
   case msg of
+    IMsgCreateAnonymObject _ -> nextMsg
+    IMsgSetLocalVars _ -> nextMsg
+    IMsgDeleteField _ _ -> nextMsg
+    IMsgSetField _ _ _ -> nextMsg
+    IMsgSetField2 _ _ _ -> nextMsg
     IMsgProcessTag -> sendMsg OMsgProcessTag >> nextMsg
     IMsgTrace str  -> liftIO (putStrLn $ " [trace] " ++ str) >> nextMsg
     _              -> return msg
@@ -106,6 +121,7 @@ nextMsg = do
 -- | Send message to player
 sendMsg :: MonadIO m => OMsg -> App m ()
 sendMsg msg = do
+  -- liftIO $ print msg
   h <- lift . lift $ liftM asHandle get
   liftIO $ hPut h (binOMsg msg) >> hFlush h
   return ()

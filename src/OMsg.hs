@@ -34,6 +34,7 @@ data OMsg
   | OMsgGetFunctionFrame Word32
   -- | 1C or 28
   | OMsgSetDebuggerOptions String String
+  deriving Show
 
 -- | Convert `OMsg` to `ByteString`
 binOMsg :: OMsg -> ByteString
@@ -43,7 +44,7 @@ binOMsg OMsgNext                     = mkBin 20 empty
 binOMsg OMsgStep                     = mkBin 21 empty
 binOMsg OMsgFinish                   = mkBin 22 empty
 binOMsg OMsgProcessTag               = mkBin 23 empty
-binOMsg (OMsgGetField addr name)     = mkBin 25 (mkBinWord32 addr `append` s2bs name `append` pack [0] `append` mkBinWord32 14)
+binOMsg (OMsgGetField addr name)     = mkBin 25 (mkBinWord32 addr `append` s2bs name `append` pack [0] `append` mkBinWord32 15)
 binOMsg (OMsgGetFunctionFrame depth) = mkBin 26 (mkBinWord32 depth)
 binOMsg (OMsgSetDebuggerOptions n v) = mkBin 28 (s2bs n `append` pack [0] `append` s2bs v `append` pack [0])
 
