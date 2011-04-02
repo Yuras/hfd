@@ -43,9 +43,11 @@ doPrintProps (name:ns) (AMF _ _ _ (AMFObject ptr _ _ _ _)) = do
       _ -> liftIO $ putStrLn "Multiple"
 doPrintProps _ _ = liftIO $ putStrLn "Not found"
 
+-- | Check wether AMF value has getter
 hasGetter :: AMF -> Bool
 hasGetter amf = amfFlags amf `testBit` 19
 
+-- | Call getter if exists
 callGetter :: MonadIO m => AMF -> App m AMF
 callGetter amf = if hasGetter amf
                    then call amf

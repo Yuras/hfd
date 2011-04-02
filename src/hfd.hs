@@ -45,6 +45,7 @@ printHello = do
   putStrLn "Copyright (c) 2011 Yuras Shumovich"
   putStrLn "mailto:shumovichy@gmail.com"
 
+-- | Print list of commands
 printHelp :: IO ()
 printHelp = do
   printHello

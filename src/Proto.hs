@@ -91,6 +91,7 @@ getField ptr name = do
     _ -> liftIO (putStrLn "Unexpected message from player") >>
          return []
 
+-- | Get property by calling getter
 getProp :: MonadIO m => Word32 -> String -> App m (Maybe AMF)
 getProp ptr name = do
   sendMsg (OMsgGetField ptr name)
