@@ -50,7 +50,7 @@ prettyAMF amf@(AMF _ _ _ v) = amfUndecoratedName amf ++ " = " ++ prettyAMVValue 
 prettyAMVValue :: AMFValue -> String
 prettyAMVValue (AMFDouble v) = show v
 prettyAMVValue (AMFBool v) = show v
-prettyAMVValue (AMFString v) = v
+prettyAMVValue (AMFString v) = show v
 prettyAMVValue (AMFObject _ _ _ _ n) = n
 prettyAMVValue AMFNull = "null"
 prettyAMVValue AMFUndefined = "undefined"
