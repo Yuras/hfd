@@ -54,7 +54,7 @@ data IMsg
   -- | 1A or 26
   | IMsgVersion Word32 Word8
   -- | 1B or 27
-  | IMsgBreakHitEx Word16 Word16 [(Word16, Word16, Word32, ByteString)]
+  | IMsgBreakHitEx Word16 Word16 [(Word16, Word16, Word32, String)]
   -- | 1C or 28
   | IMsgSetField2 Word32 ByteString [Word8]
   -- | 1E or 30
@@ -229,7 +229,7 @@ iterBreakHitEx _ = do
     line <- endianRead2 e_
     addr <- endianRead4 e_
     (entry, _) <- takeStr
-    return (fileId, line, addr, entry)
+    return (fileId, line, addr, bs2s entry)
 
 iterBreakHit :: Monad m => Word32 -> Iteratee ByteString m IMsg
 iterBreakHit len = do

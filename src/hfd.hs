@@ -9,6 +9,7 @@ where
 
 import Data.Tuple.Utils (fst3)
 import Data.Maybe
+import Data.Word (Word32, Word16)
 import Data.ByteString.Char8 (unpack)
 import System.IO (Handle, hClose, hSetBinaryMode)
 import System.Console.Haskeline (getInputLine)
@@ -20,7 +21,7 @@ import Control.Exception (bracket)
 import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
-import App (App, runApp, FileEntry(..), addFileEntry, AppState(..), setLastCmd)
+import App (App, runApp, FileEntry(..), addFileEntry, AppState(..), setLastCmd, setStack)
 import IMsg (IMsg(..))
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 import Print (doPrint)
@@ -90,10 +91,16 @@ processUntillBreak :: App IO ()
 processUntillBreak = do
   msg <- nextMsg
   case msg of
-    IMsgBreakHitEx _ _ _       -> printSourceLine msg
+    IMsgBreakHitEx _ _ stack   -> processBreak stack   >> printSourceLine msg
     IMsgSwdFileEntry _ _ _ _ _ -> processFileEntry msg >> processUntillBreak
     IMsgException _ _ _        -> processException msg >> processUntillBreak
     _                          -> processUntillBreak
+
+-- | Save current stack
+processBreak :: Monad m => [(Word16, Word16, Word32, String)] -> App m ()
+processBreak = setStack . map toStack
+  where
+  toStack (fl, ln, _, fn) = (fromIntegral fl, fromIntegral ln, fn)
 
 -- | Print information about exception
 processException :: MonadIO m => IMsg -> App m ()

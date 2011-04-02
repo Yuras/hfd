@@ -7,6 +7,8 @@ App,
 runApp,
 AppState(..),
 FileEntry(..),
+StackFrame,
+setStack,
 addFileEntry,
 setLastCmd
 )
@@ -53,13 +55,14 @@ completeFunc (s, _) = do
 -- | Application state
 data AppState = AppState {
   asFiles :: [(Int, FileEntry)],  -- ^ map of file entries
+  asStack :: [StackFrame],        -- ^ current stack if any
   asLastCmd :: Maybe UCmd,        -- ^ last command entered by user
   asHandle :: Handle              -- ^ handle to player
 } deriving Show
 
 -- | Default application state contains nothing
 defaultState :: Handle -> AppState
-defaultState = AppState [] Nothing
+defaultState = AppState [] [] Nothing
 
 -- | File entry represents one source file
 data FileEntry = FileEntry {
@@ -67,6 +70,16 @@ data FileEntry = FileEntry {
                          -- e.g. @\/home\/user\/proj;com\/example;Main.as@
   feContent :: [String]  -- ^ File content
 } deriving Show
+
+-- | Represents stack frame
+-- file id, line and function name
+type StackFrame = (Int, Int, String)
+
+-- | Set current stack
+setStack :: Monad m => [StackFrame] -> App m ()
+setStack st = do
+  state <- lift $ lift get
+  lift . lift $ put state {asStack = st}
 
 -- | Add new file entry to app state
 --
