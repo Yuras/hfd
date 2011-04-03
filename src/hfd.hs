@@ -21,7 +21,8 @@ import Control.Exception (bracket)
 import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
-import App (App, runApp, FileEntry(..), addFileEntry, AppState(..), setLastCmd, setStack)
+import App (App, runApp, FileEntry(..), addFileEntry, getFileEntry,
+            AppState(..), setLastCmd, setStack, Breakpoint(..))
 import IMsg (IMsg(..))
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 import Print (doPrint)
@@ -57,6 +58,7 @@ printHelp = do
   putStrLn "\tstep                          continue execution until different source line reached"
   putStrLn "\tnext                          continue execution until next source line reached"
   putStrLn "\tinfo files                    show all source files"
+  putStrLn "\tinfo breakpoints              show all breakpoints"
   putStrLn "\tbreakpoint <fileID>:<line>    set breakpoint at the location, e.g. \'b #1:23\'"
   putStrLn "\t                              use \'info files\' to get fileID"
   putStrLn "\tprint <name>[.name]*          inspect variables"
@@ -212,4 +214,11 @@ processInfoCmd ICFiles = printFiles
     liftIO $ mapM_ printFile files
   printFile (idi, FileEntry name _) =
     putStrLn $ "#" ++ show idi ++ ": " ++ name
+processInfoCmd ICBreakpoints = do
+  bs <- lift . lift $ liftM asBreaks get
+  mapM_ printBP bs
+  where
+  printBP (iD, Breakpoint fl ln) = do
+    fe <- liftM fromJust $ getFileEntry fl
+    liftIO $ putStrLn $ " " ++ show iD ++ "\t: " ++ fePath fe ++ " at line " ++ show ln
 

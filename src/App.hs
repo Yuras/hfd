@@ -11,6 +11,7 @@ StackFrame,
 Breakpoint(..),
 setStack,
 addFileEntry,
+getFileEntry,
 setLastCmd,
 setBreakpoints,
 newBreakId
@@ -23,6 +24,7 @@ import Data.Iteratee.IO (enumHandle)
 import System.IO (Handle)
 import System.Environment (getEnv)
 import System.Console.Haskeline (InputT, runInputT, Settings(..), CompletionFunc, simpleCompletion)
+import Control.Monad (liftM)
 import Control.Monad.Trans.State (StateT, evalStateT, get, put)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class(MonadIO)
@@ -97,6 +99,11 @@ data FileEntry = FileEntry {
 -- | Represents stack frame
 -- file id, line and function name
 type StackFrame = (Int, Int, String)
+
+getFileEntry :: Monad m => Int -> App m (Maybe FileEntry)
+getFileEntry iD = do
+  fs <- lift . lift $ liftM asFiles get
+  return $ lookup iD fs
 
 -- | Set current stack
 setStack :: Monad m => [StackFrame] -> App m ()

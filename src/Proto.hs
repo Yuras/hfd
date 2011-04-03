@@ -41,7 +41,6 @@ setBreakpoint fl ln = do
     else do
       sendMsg (OMsgSetBreakpoint (fromIntegral fl) (fromIntegral ln))
       msg <- nextMsg
-      liftIO $ print msg
       case msg of
         IMsgBreakpoints bs' -> do
           let exists' = isJust $ find (== (fromIntegral fl, fromIntegral ln)) bs'

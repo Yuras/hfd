@@ -115,7 +115,8 @@ parsePrintCmd [v] = Just $ props v
 parsePrintCmd _ = Nothing
 
 -- | Info commands
-data InfoCmd = ICFiles  -- ^ @info files@
+data InfoCmd = ICFiles        -- ^ @info files@
+             | ICBreakpoints  -- ^ @info breakpoints@
              deriving Show
 
 -- | Parse info commands
@@ -124,8 +125,9 @@ parseInfoCmd [] = Nothing
 parseInfoCmd (c:cs) = do
   cmd <- mcmd
   case cmd of
-    "files" | cs == [] -> Just ICFiles
-    _                  -> Nothing
+    "files"       | cs == [] -> Just ICFiles
+    "breakpoints" | cs == [] -> Just ICBreakpoints
+    _                        -> Nothing
   where
   condidates = suggestInfoCmd c
   mcmd = if length condidates == 1
@@ -134,7 +136,7 @@ parseInfoCmd (c:cs) = do
 
 -- | List of info commands
 infoCommands :: [String]
-infoCommands = ["files"]
+infoCommands = ["files", "breakpoints"]
 
 -- | Returns list of info commands that maches the given prefix
 suggestInfoCmd :: String -> [String]
