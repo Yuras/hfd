@@ -14,6 +14,8 @@ nextMsg
 )
 where
 
+import Data.Maybe (isJust)
+import Data.List (find)
 import Data.Word (Word32)
 import Data.ByteString (hPut)
 import Control.Monad (liftM)
@@ -22,7 +24,7 @@ import Control.Monad.Trans.State (get)
 import Control.Monad.IO.Class(liftIO, MonadIO)
 import System.IO (hFlush)
 
-import App (App, AppState(..))
+import App (App, AppState(..), Breakpoint(..), setBreakpoints, newBreakId)
 import OMsg (OMsg(..), binOMsg)
 import IMsg (IMsg(..), AMF(..), nextIMessage)
 
@@ -32,11 +34,24 @@ setBreakpoint :: MonadIO m
   -> Int  -- ^ Line number
   -> App m ()
 setBreakpoint fl ln = do
-  sendMsg (OMsgSetBreakpoint (fromIntegral fl) (fromIntegral ln))
-  msg <- nextMsg
-  case msg of
-    IMsgBreakpoints _ -> return ()
-    _ -> liftIO $ putStrLn "doSetBreakpoint: Unexpected message from player"
+  bs <- lift . lift $ liftM asBreaks get
+  let exists = isJust $ find (\(_, b) -> (bpFileId b == fl) && (bpLine b == ln)) bs
+  if exists
+    then liftIO $ putStrLn "Breakpoint exists. Multiple breakpoints at the same line are not supported."
+    else do
+      sendMsg (OMsgSetBreakpoint (fromIntegral fl) (fromIntegral ln))
+      msg <- nextMsg
+      liftIO $ print msg
+      case msg of
+        IMsgBreakpoints bs' -> do
+          let exists' = isJust $ find (== (fromIntegral fl, fromIntegral ln)) bs'
+          if exists'
+            then do
+              newId <- newBreakId
+              setBreakpoints $ (newId, Breakpoint fl ln) : bs
+            else
+              liftIO $ putStrLn "Can't resolve breakpoint (the line is not executable?)"
+        _ -> liftIO $ putStrLn "doSetBreakpoint: Unexpected message from player"
 
 
 -- | Set debuger option

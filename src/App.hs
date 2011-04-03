@@ -8,9 +8,12 @@ runApp,
 AppState(..),
 FileEntry(..),
 StackFrame,
+Breakpoint(..),
 setStack,
 addFileEntry,
-setLastCmd
+setLastCmd,
+setBreakpoints,
+newBreakId
 )
 where
 
@@ -56,13 +59,33 @@ completeFunc (s, _) = do
 data AppState = AppState {
   asFiles :: [(Int, FileEntry)],  -- ^ map of file entries
   asStack :: [StackFrame],        -- ^ current stack if any
+  asBreaks :: [(Int, Breakpoint)], -- ^ list of breakpoints
+  asLastBreakId :: Int,           -- ^ last used breakpoint id
   asLastCmd :: Maybe UCmd,        -- ^ last command entered by user
   asHandle :: Handle              -- ^ handle to player
 } deriving Show
 
+data Breakpoint = Breakpoint {
+  bpFileId :: Int,
+  bpLine :: Int
+} deriving Show
+
+-- | Set breakpoints
+setBreakpoints :: Monad m => [(Int, Breakpoint)] -> App m ()
+setBreakpoints bs = do
+  state <- lift . lift $ get
+  lift . lift $ put state {asBreaks = bs}
+
+newBreakId :: Monad m => App m Int
+newBreakId = do
+  state <- lift . lift $ get
+  let newId = asLastBreakId state + 1
+  lift . lift $ put state {asLastBreakId = newId}
+  return newId
+
 -- | Default application state contains nothing
 defaultState :: Handle -> AppState
-defaultState = AppState [] [] Nothing
+defaultState = AppState [] [] [] 0 Nothing
 
 -- | File entry represents one source file
 data FileEntry = FileEntry {
