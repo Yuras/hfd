@@ -77,6 +77,7 @@ data AMF = AMF {
   amfValue :: AMFValue
 } deriving Show
 
+-- | Some objects (e.g. private members) could be decorated
 amfUndecoratedName :: AMF -> String
 amfUndecoratedName = reverse . takeWhile (/= ':') . reverse . amfName
 

@@ -20,6 +20,10 @@ data OMsg
   = OMsgContinue
   -- | 11 or 17
   | OMsgSetBreakpoint Word16 Word16
+  -- | 12 or 18
+  | OMsgClearBreakpoint Word16 Word16
+  -- | 13 or 19
+  | OMsgClearBreakpoints
   -- | 14 or 20
   | OMsgNext
   -- | 15 or 21
@@ -40,6 +44,8 @@ data OMsg
 binOMsg :: OMsg -> ByteString
 binOMsg OMsgContinue                 = mkBin 15 empty
 binOMsg (OMsgSetBreakpoint fl ln)    = mkBin 17 (mkBinWord32 0 `append` mkBinWord16 fl `append` mkBinWord16 ln)
+binOMsg (OMsgClearBreakpoint fl ln)  = mkBin 18 (mkBinWord32 0 `append` mkBinWord16 fl `append` mkBinWord16 ln)
+binOMsg OMsgClearBreakpoints         = mkBin 19 empty
 binOMsg OMsgNext                     = mkBin 20 empty
 binOMsg OMsgStep                     = mkBin 21 empty
 binOMsg OMsgFinish                   = mkBin 22 empty

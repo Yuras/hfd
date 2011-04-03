@@ -22,11 +22,12 @@ import Network (withSocketsDo, PortNumber, PortID(PortNumber), HostName,
                 sClose, accept, listenOn)
 
 import App (App, runApp, FileEntry(..), addFileEntry, getFileEntry,
-            AppState(..), setLastCmd, setStack, Breakpoint(..))
+            AppState(..), setLastCmd, setStack, Breakpoint(..), removeBreakpoint)
 import IMsg (IMsg(..))
 import UCmd (UCmd(..), parseUCmd, InfoCmd(..))
 import Print (doPrint)
-import Proto (setDebuggerOption, nextMsg, execContinue, execNext, execStep, execFinish, setBreakpoint)
+import Proto (setDebuggerOption, nextMsg, execContinue, execNext, execStep, execFinish,
+              setBreakpoint, deleteBreakpoint)
 
 -- | Entry point
 main :: IO ()
@@ -61,6 +62,9 @@ printHelp = do
   putStrLn "\tinfo breakpoints              show all breakpoints"
   putStrLn "\tbreakpoint <fileID>:<line>    set breakpoint at the location, e.g. \'b #1:23\'"
   putStrLn "\t                              use \'info files\' to get fileID"
+  putStrLn "\tdelete <breakpointID>         delete breakpoint by ID"
+  putStrLn "\t                              use \'info breakpoints\' to get breakpoint ID"
+  putStrLn "\tdelete                        delete all breakpoints"
   putStrLn "\tprint <name>[.name]*          inspect variables"
   putStrLn "\tbacktrace (bt)                show call stack"
   putStrLn "Shortcuts are allowed, e.g. \'c\', \'co\', \'cont\', etc will mean \'continue\'"
@@ -170,8 +174,28 @@ processCmd (UCmdPrint v)          = doPrint v >> processUserInput
 processCmd (UCmdBreakpoint fl ln) = setBreakpoint fl ln >> processUserInput
 processCmd UCmdStack              = printStack >> processUserInput
 processCmd UCmdList               = listSource >> processUserInput
+processCmd (UCmdDelete (Just iD)) = deleteBP iD >> processUserInput
+processCmd (UCmdDelete Nothing)   = deleteAll >> processUserInput
 processCmd UCmdTest               = processUserInput
 processCmd UCmdHelp               = liftIO printHelp >> processUserInput
+
+-- | Delete breakpoint by id
+deleteBP :: MonadIO m => Int -> App m ()
+deleteBP iD = do
+  bs <- lift . lift $ liftM asBreaks get
+  let bp = lookup iD bs
+  if isJust bp
+    then do
+      let Breakpoint fl ln = fromJust bp
+      deleteBreakpoint fl ln
+      removeBreakpoint iD
+    else liftIO $ putStrLn "Unknown breakpoint id. Type \"info breakpoints\" for list of all breakpoints"
+
+-- | Delete all breakpoints
+deleteAll :: MonadIO m => App m ()
+deleteAll = do
+  bs <- lift . lift $ liftM asBreaks get
+  mapM_ (deleteBP . fst) bs
 
 -- | Print source around current position
 listSource :: MonadIO m => App m ()

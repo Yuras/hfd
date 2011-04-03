@@ -2,6 +2,8 @@
 module Proto
 (
 setBreakpoint,
+deleteBreakpoint,
+-- deleteBreakpoints,
 setDebuggerOption,
 execFinish,
 execContinue,
@@ -52,6 +54,17 @@ setBreakpoint fl ln = do
               liftIO $ putStrLn "Can't resolve breakpoint (the line is not executable?)"
         _ -> liftIO $ putStrLn "doSetBreakpoint: Unexpected message from player"
 
+
+-- | Delete breakpoint
+deleteBreakpoint :: MonadIO m => Int -> Int -> App m ()
+deleteBreakpoint fl ln =
+  sendMsg (OMsgClearBreakpoint (fromIntegral fl) (fromIntegral ln))
+
+-- | Delete all breakpoints
+-- Hmm... Doesn't work... Use `deleteBreakpoint` for now
+{-deleteBreakpoints :: MonadIO m => App m ()
+deleteBreakpoints =
+  sendMsg OMsgClearBreakpoints-}
 
 -- | Set debuger option
 setDebuggerOption :: MonadIO m

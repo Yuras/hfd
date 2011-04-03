@@ -14,6 +14,7 @@ addFileEntry,
 getFileEntry,
 setLastCmd,
 setBreakpoints,
+removeBreakpoint,
 newBreakId
 )
 where
@@ -67,6 +68,7 @@ data AppState = AppState {
   asHandle :: Handle              -- ^ handle to player
 } deriving Show
 
+-- | Represents single breakpoint
 data Breakpoint = Breakpoint {
   bpFileId :: Int,
   bpLine :: Int
@@ -78,6 +80,14 @@ setBreakpoints bs = do
   state <- lift . lift $ get
   lift . lift $ put state {asBreaks = bs}
 
+-- | Remove breakpoint by id
+removeBreakpoint :: Monad m => Int -> App m ()
+removeBreakpoint iD = do
+  state <- lift . lift $ get
+  let bs = filter ((/= iD) . fst) $ asBreaks state
+  setBreakpoints bs
+
+-- | Allocate id for new breakpoint
 newBreakId :: Monad m => App m Int
 newBreakId = do
   state <- lift . lift $ get
@@ -100,6 +110,7 @@ data FileEntry = FileEntry {
 -- file id, line and function name
 type StackFrame = (Int, Int, String)
 
+-- | Returns `FileEntry` by id
 getFileEntry :: Monad m => Int -> App m (Maybe FileEntry)
 getFileEntry iD = do
   fs <- lift . lift $ liftM asFiles get

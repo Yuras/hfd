@@ -27,6 +27,7 @@ data UCmd
   | UCmdHelp
   | UCmdStack
   | UCmdList
+  | UCmdDelete (Maybe Int)
   | UCmdTest  -- ^ Just for tests
   deriving Show
 
@@ -51,8 +52,18 @@ parseUCmd = parse . words
       "backtrace" | cs == [] -> Just UCmdStack
       "bt"       | cs == [] -> Just UCmdStack
       "list"                -> parseListCmd cs
+      "delete"              -> parseDeleteCmd cs
       "test"                -> Just UCmdTest
       _                     -> Nothing
+
+-- | Parse @delete@ command
+parseDeleteCmd :: [String] -> Maybe UCmd
+parseDeleteCmd [] = Just $ UCmdDelete Nothing
+parseDeleteCmd [iD] =
+  if all isDigit iD
+    then Just $ UCmdDelete $ Just $ read iD
+    else Nothing
+parseDeleteCmd _ = Nothing
 
 -- | Parse @list@ command
 parseListCmd :: [String] -> Maybe UCmd
@@ -97,7 +108,7 @@ suggestCmd cmds s = filter (isPrefixOf s) cmds
 -- | List of base commands
 baseCommands :: [String]
 baseCommands = ["continue", "step", "next", "finish", "quit", "info", "print",
-  "breakpoint", "help", "backtrace", "bt", "b", "list"]
+  "breakpoint", "help", "backtrace", "bt", "b", "list", "delete"]
 
 -- | Returns list of base commands that maches the given prefix
 suggestBaseCmd :: String -> [String]

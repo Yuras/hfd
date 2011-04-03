@@ -23,7 +23,7 @@ You need Haskell Platform to install hfd.
 
 hfd supports most of basic debugger features
 
-* set and list breakpoints
+* set, list, delete breakpoints
 * execution control: continue, step, next, finish
 * inspect variable
 * inspect properties (call getters)
@@ -36,7 +36,7 @@ Features, that are not implemented still
 
 * improved listing of source code
 * walk through call stack
-* manage breakpoint (delete, enable/disable)
+* enable/disable breakpoints
 * conditional breakpoints
 * expression evaluation
 * set variables
