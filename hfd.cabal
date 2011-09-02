@@ -14,7 +14,7 @@ Executable hfd
   Hs-source-dirs:    src
   Main-is:           hfd.hs
   Build-depends:
-                     base < 4.3.0.0,
+                     base < 5,
                      network < 3.0.0.0,
                      haskeline < 0.7.0.0,
                      iteratee < 1.0.0.0,
