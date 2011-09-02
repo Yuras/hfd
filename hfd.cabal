@@ -1,5 +1,5 @@
 Name:                hfd
-Version:             0.0.1
+Version:             0.0.2
 Synopsis:            Flash debugger
 License:             BSD3
 License-file:        LICENSE
@@ -7,8 +7,9 @@ Author:              Yuras Shumovich
 Maintainer:          shumovichy@gmail.com
 Category:            Development
 Build-type:          Simple
--- Extra-source-files:  
-Cabal-version:       >=1.2
+Extra-source-files:  README.md
+Cabal-version:       >=1.6
+Description:         Flash debugger. You need debug flash player installed to use it.
 
 Executable hfd
   Hs-source-dirs:    src
@@ -30,5 +31,9 @@ Executable hfd
                      UCmd,
                      Print,
                      Proto
-  Ghc-options:       -Wall -Werror -fno-warn-orphans
+  Ghc-options:       -Wall -fno-warn-orphans
+
+Source-repository head
+  Type:              git
+  Location:          git@github.com:Yuras/hfd.git
 
